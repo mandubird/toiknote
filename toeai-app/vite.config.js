@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: '토오AI - 토익 오답노트',
-        short_name: '토오AI',
+        name: '토답 - AI 기반 토익 오답노트',
+        short_name: '토답',
         description: '사진 한 장으로 끝내는 토익 오답 정리',
         theme_color: '#3b82f6',
         background_color: '#ffffff',

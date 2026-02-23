@@ -99,7 +99,7 @@ const Layout = () => {
       {/* 상단 헤더 */}
       <header className="bg-white border-b border-gray-200 safe-area-top">
         <div className="px-4 py-3">
-          <h1 className="text-xl font-bold text-primary-600">토오AI</h1>
+          <h1 className="text-xl font-bold text-primary-600">토답</h1>
           <p className="text-xs text-gray-500">사진 한 장으로 끝내는 오답 정리</p>
         </div>
       </header>

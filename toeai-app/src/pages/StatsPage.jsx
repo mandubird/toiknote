@@ -57,6 +57,11 @@ const StatsPage = () => {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">학습 통계</h2>
         <p className="text-sm text-gray-600">나의 토익 학습 현황을 한눈에 확인하세요</p>
+        {totalWrong > 0 && (
+          <p className="text-xs text-gray-500 mt-1">
+            아래 통계는 <strong>저장한 오답 {totalWrong}개 기준</strong>으로 집계한 결과예요.
+          </p>
+        )}
         <p className="text-xs text-amber-700 mt-2 bg-amber-50 rounded px-2 py-1">
           자주 틀리는 포인트 TOP 3·AI 전략 추천은 유료 구독 시 이용할 수 있어요.
         </p>
@@ -70,7 +75,9 @@ const StatsPage = () => {
           <>
             <p className="text-sm text-gray-600 mb-1">추정 점수 (오답 비율 기반)</p>
             <p className="text-3xl font-bold text-gray-900">{estimatedScore}점</p>
-            <p className="text-xs text-gray-500 mt-1">LC/RC 오답 비율로 산출한 참고용 점수예요</p>
+            <p className="text-xs text-gray-500 mt-1">
+              저장한 오답 {totalWrong}개 기준, LC/RC 오답 비율로 산출한 참고용 점수예요.
+            </p>
           </>
         )}
       </div>
@@ -78,6 +85,9 @@ const StatsPage = () => {
       {/* Part별 오답 분포 (원형) */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
         <h3 className="font-semibold text-gray-900 mb-3">파트별 오답 분포</h3>
+        {totalWrong > 0 && (
+          <p className="text-xs text-gray-500 mb-3">저장한 오답 {totalWrong}개 기준</p>
+        )}
         {partChartData.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-6">아직 데이터가 없어요</p>
         ) : (

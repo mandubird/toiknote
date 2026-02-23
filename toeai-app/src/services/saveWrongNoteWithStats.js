@@ -17,7 +17,7 @@ function getLcOrRc(part, partNumber, lcOrRc) {
 
 /**
  * @param {string} userId
- * @param {{ imageUrl: string, part: string, partNumber?: number, lcOrRc?: string, question: string, answer: string, explanation: string, tags: string[], difficulty?: number }} data
+ * @param {object} data - 기본 필드 + STEP3 세부: grammarCategory, grammarSubType, passageType, questionType, questionPattern, answerType
  */
 export async function saveWrongNoteWithStats(userId, data) {
   const partNumber = data.partNumber ?? parsePartNumber(data.part)
@@ -38,6 +38,12 @@ export async function saveWrongNoteWithStats(userId, data) {
       p_difficulty: difficulty,
       p_source_image_url: imageUrl,
       p_image_url: imageUrl,
+      p_grammar_category: data.grammarCategory ?? null,
+      p_grammar_sub_type: data.grammarSubType ?? null,
+      p_passage_type: data.passageType ?? null,
+      p_question_type: data.questionType ?? null,
+      p_question_pattern: data.questionPattern ?? null,
+      p_answer_type: data.answerType ?? null,
     })
 
     if (error) throw error

@@ -16,7 +16,7 @@ const PaywallModal = ({ open, onClose }) => {
         <div className="p-6 overflow-y-auto">
           <h2 className="text-xl font-bold text-gray-900 mb-2">무료 5회를 모두 사용했어요</h2>
           <p className="text-sm text-gray-600 mb-3">
-            무료는 오답 5문제 + 기본 분석(OCR, 파트 분류, 해설)만 제공해요.
+            유료 구독 시 <strong>오답 자동 집계 + AI 맞춤 전략 추천</strong>을 이용할 수 있어요.
           </p>
 
           <div className="space-y-2 mb-3 text-xs text-gray-600">
@@ -33,7 +33,7 @@ const PaywallModal = ({ open, onClose }) => {
 
           {!paymentUrl && (
             <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-4">
-              결제 페이지 연동 예정이에요. 문의: support@toeai.com
+              결제 페이지 연동 예정이에요. 문의: support@toeicodap.com
             </p>
           )}
 

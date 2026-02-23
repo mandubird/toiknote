@@ -1,4 +1,4 @@
-# 토오AI 서버 배포 가이드
+# 토답 서버 배포 가이드 (도메인: toeicodap.com)
 
 웹 앱을 서버에 올려서 누구나 접속할 수 있게 하는 방법입니다.
 
@@ -83,14 +83,14 @@ npm run build
 도메인을 다른 업체(가비아, 카페24, Cloudflare 등)에서 샀다면, 그 도메인을 Vercel에 연결할 수 있습니다.
 
 1. **Vercel** → 해당 프로젝트 → **Settings** → **Domains**
-2. **Add**에 본인 도메인 입력 (예: `app.toeai.com` 또는 `toeai.com`)
+2. **Add**에 본인 도메인 입력 (예: `toeicodap.com`)
 3. Vercel이 안내하는 대로 **DNS 설정**을 합니다.
    - **A 레코드**: Vercel이 알려주는 IP (예: `76.76.21.21`) → `@` 또는 원하는 서브도메인
    - **CNAME**: `cname.vercel-dns.com` → `www` 등 (Vercel 화면에 나오는 값 사용)
 4. DNS 전파 후(몇 분~최대 48시간) Vercel에서 SSL이 자동 발급됩니다.
 
-이후 사용자는 `https://app.toeai.com` 같은 주소로 접속하고, PWA도 이 도메인으로 설치됩니다.  
-**Supabase** → Authentication → URL Configuration에서 **Redirect URLs**에 `https://app.toeai.com/**` 를 추가하는 것을 잊지 마세요.
+이후 사용자는 `https://toeicodap.com` 같은 주소로 접속하고, PWA도 이 도메인으로 설치됩니다.  
+**Supabase** → Authentication → URL Configuration에서 **Redirect URLs**에 `https://toeicodap.com/**` 를 추가하는 것을 잊지 마세요.
 
 ---
 
@@ -116,7 +116,7 @@ npm run build
 1. **Authentication** → **Sign In / Providers** → **Google** 켜기
 2. Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성 후, **Client ID**와 **Client Secret**을 Supabase에 입력
 3. **Authentication** → **URL Configuration**:
-   - **Site URL**: 배포할 주소 (예: `https://yourapp.vercel.app` 또는 `https://app.toeai.com`)
+   - **Site URL**: 배포할 주소 (예: `https://yourapp.vercel.app` 또는 `https://toeicodap.com`)
    - **Redirect URLs**: 위 Site URL + `https://yourapp.vercel.app/**` 형태로 추가 (커스텀 도메인 쓰면 해당 도메인도 추가)
 
 ---

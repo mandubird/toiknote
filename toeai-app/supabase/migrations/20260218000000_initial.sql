@@ -1,4 +1,4 @@
--- 토오AI Supabase 스키마: users, wrong_answers, tag_stats, score_analytics, subscriptions
+-- 토답 (toeicodap.com) Supabase 스키마: users, wrong_answers, tag_stats, score_analytics, subscriptions
 
 -- users: 사용자별 usage_count, 점수
 CREATE TABLE IF NOT EXISTS public.users (

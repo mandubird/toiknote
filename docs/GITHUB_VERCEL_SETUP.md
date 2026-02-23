@@ -23,20 +23,20 @@ git commit -m "Initial commit: 토오AI (Supabase + Vite)"
 ### 1-3. 로컬과 연결 후 푸시
 
 GitHub에서 저장소를 만든 뒤 나오는 안내 중 **"…push an existing repository from the command line"** 아래 명령어를 사용합니다.  
-(아래 `YOUR_USERNAME`, `YOUR_REPO`를 본인 GitHub 사용자명·저장소 이름으로 바꾸세요.)
+저장소: **https://github.com/mandubird/toiknote**
 
 ```bash
 cd /Users/gimmingyu/Desktop/2025/Toe_AI
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git remote add origin https://github.com/mandubird/toiknote.git
 git branch -M main
 git push -u origin main
 ```
 
-예: 저장소가 `https://github.com/gimmingyu/Toe_AI` 이면
+이미 remote를 추가한 적이 있다면:
 
 ```bash
-git remote add origin https://github.com/gimmingyu/Toe_AI.git
-git branch -M main
+cd /Users/gimmingyu/Desktop/2025/Toe_AI
+git remote set-url origin https://github.com/mandubird/toiknote.git
 git push -u origin main
 ```
 

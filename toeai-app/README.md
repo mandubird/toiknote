@@ -1,4 +1,4 @@
-# 토오AI - 토익 오답노트 앱
+# 토답 - AI 기반 토익 오답노트
 
 사진 한 장으로 끝내는 파트별 자동 오답 정리
 
@@ -111,4 +111,4 @@ VITE_PAYMENT_URL=
 
 ## 📞 문의
 
-support@toeai.com
+support@toeicodap.com

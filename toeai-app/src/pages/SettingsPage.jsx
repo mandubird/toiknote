@@ -204,8 +204,8 @@ const SettingsPage = () => {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">문의</span>
-            <a href="mailto:support@toeai.com" className="text-primary-600">
-              support@toeai.com
+            <a href="mailto:support@toeicodap.com" className="text-primary-600">
+              support@toeicodap.com
             </a>
           </div>
         </div>

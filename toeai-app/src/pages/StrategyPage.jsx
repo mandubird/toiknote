@@ -81,7 +81,10 @@ const StrategyPage = () => {
   return (
     <div className="p-4">
       <h2 className="text-2xl font-bold text-gray-900 mb-2">AI 추천 학습 전략</h2>
-      <p className="text-sm text-gray-600 mb-4">나의 약점을 분석한 맞춤 전략이에요</p>
+      <p className="text-sm text-gray-600 mb-1">나의 약점을 분석한 맞춤 전략이에요</p>
+      <p className="text-xs text-gray-500 mb-4">
+        AI가 당신 데이터를 바탕으로 추천한 학습 방향이에요.
+      </p>
 
       <button
         type="button"

@@ -43,6 +43,13 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       explanation,
       tags: tagsArray,
       difficulty,
+      // STEP 3: AI 세부 분류 (저장 시 그대로 전달)
+      grammarCategory: initialData?.grammarCategory ?? null,
+      grammarSubType: initialData?.grammarSubType ?? null,
+      passageType: initialData?.passageType ?? null,
+      questionType: initialData?.questionType ?? null,
+      questionPattern: initialData?.questionPattern ?? null,
+      answerType: initialData?.answerType ?? null,
     })
   }
 
@@ -98,6 +105,19 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                   )) : '-'}
                 </div>
               </div>
+              {/* STEP 3: 세부 분류 (Part 5 문법 / Part 7 유형 / Part 2 패턴) */}
+              {(initialData?.grammarCategory || initialData?.passageType || initialData?.questionPattern) && (
+                <div className="pt-2 border-t border-gray-100">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">AI 세부 분류</label>
+                  <div className="text-xs text-gray-700 space-y-0.5">
+                    {initialData.grammarCategory && (
+                      <p>문법: {initialData.grammarCategory}{initialData.grammarSubType ? ` (${initialData.grammarSubType})` : ''}</p>
+                    )}
+                    {initialData.passageType && <p>지문: {initialData.passageType} · {initialData.questionType || '-'}</p>}
+                    {initialData.questionPattern && <p>패턴: {initialData.questionPattern} · {initialData.answerType || '-'}</p>}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>

@@ -1,4 +1,4 @@
--- Storage bucket for user-uploaded images (토오AI)
+-- Storage bucket for user-uploaded images (토답)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
