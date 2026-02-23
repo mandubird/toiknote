@@ -74,8 +74,8 @@ npm run dev
 
 | 단계 | 내용 | 비고 |
 |------|------|------|
-| **STEP 3** ✅ | GPT 세부 분류 (Part 5 문법, Part 7 유형, Part 2 패턴) | 완료. **Supabase SQL Editor**에서 `migrations/20260223000000_step3_segment_fields.sql` 실행 필요 |
-| **STEP 4** | 2단계 팝업 UI (파트별 세부 태그, "시간 부족으로 찍음") | AnalysisConfirmModal 확장 |
+| **STEP 3** ✅ | GPT 세부 분류 (Part 5 문법, Part 7 유형, Part 2 패턴) | 완료 |
+| **STEP 4** ✅ | 2단계 팝업 UI (파트별 세부 태그, "시간 부족으로 찍음") | 완료. **Supabase**에서 `20260223000001_step4_user_tags_timeout.sql` 실행 필요 |
 | **STEP 5** | 트랜잭션 저장 정리 | 현재 RPC 사용 중, 필요 시 스키마 확장 |
 | **STEP 6** | 통계 페이지 강화 (Part 5 문법 막대, Part 7 시간 등) | tag_stats ↔ wrong_notes 스키마 맞추기 |
 | **STEP 7** | 전략 페이지 (AI 코칭, 24h 캐시) | 이미 기본 구현됨, 프롬프트·캐시 보강 |

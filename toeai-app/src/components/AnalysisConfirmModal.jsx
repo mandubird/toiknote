@@ -1,5 +1,29 @@
 import { useState, useEffect } from 'react'
 
+// STEP 4: 파트별 세부 태그 옵션 (여러 개 선택 가능)
+const PART_TAG_OPTIONS = {
+  5: [
+    { label: '시제 관련', options: ['현재완료', '과거시제', '미래시제', '시제일치'] },
+    { label: '관계대명사', options: ['주격', '목적격', '소유격', '선행사불일치'] },
+    { label: '기타', options: ['수일치', '전치사', '접속사', '분사', '가정법', '비교급', '어휘'] },
+  ],
+  6: [
+    { label: '빈칸 유형', options: ['문장삽입', '문법', '어휘', '연결어'] },
+    { label: '문맥', options: ['앞문장미이해', '전체흐름미파악'] },
+  ],
+  7: [
+    { label: '지문', options: ['단일지문', '이중지문', '삼중지문'] },
+    { label: '문제 유형', options: ['사실확인', '추론', '어휘', '의도파악', '문장삽입'] },
+  ],
+  2: [
+    { label: '질문 패턴', options: ['의문사질문', '일반의문문', '부정의문문', '선택의문문', '제안/요청', '평서문'] },
+    { label: '답변 유형', options: ['직접답변', '우회답변', '부정응답'] },
+  ],
+  1: [{ label: '함정', options: ['동작함정', '위치함정', '유사발음', '수동태'] }],
+  3: [{ label: '유형', options: ['주제', '세부정보', '추론', '의도파악', '다음행동'] }],
+  4: [{ label: '담화', options: ['공지', '안내방송', '광고', '회의', '전화메시지'] }, { label: '유형', options: ['주제', '세부정보', '추론'] }],
+}
+
 const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, saving }) => {
   const [step, setStep] = useState(1)
   const [part, setPart] = useState('')
@@ -10,6 +34,8 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
   const [lcOrRc, setLcOrRc] = useState('RC')
   const [difficulty, setDifficulty] = useState(2)
   const [partNumber, setPartNumber] = useState(5)
+  const [userSelectedTags, setUserSelectedTags] = useState([])
+  const [timeoutFlag, setTimeoutFlag] = useState(false)
 
   useEffect(() => {
     if (open && initialData) {
@@ -22,6 +48,8 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       setLcOrRc(initialData.lcOrRc === 'LC' ? 'LC' : 'RC')
       setDifficulty([1, 2, 3].includes(Number(initialData.difficulty)) ? Number(initialData.difficulty) : 2)
       setPartNumber(initialData.partNumber >= 1 && initialData.partNumber <= 7 ? initialData.partNumber : 5)
+      setUserSelectedTags([])
+      setTimeoutFlag(false)
     }
   }, [open, initialData])
 
@@ -31,6 +59,12 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
     .split(/[,，\s]+/)
     .map((t) => t.trim())
     .filter(Boolean)
+
+  const toggleUserTag = (tag) => {
+    setUserSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
 
   const handleSave = () => {
     onSave({
@@ -43,15 +77,19 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       explanation,
       tags: tagsArray,
       difficulty,
-      // STEP 3: AI 세부 분류 (저장 시 그대로 전달)
       grammarCategory: initialData?.grammarCategory ?? null,
       grammarSubType: initialData?.grammarSubType ?? null,
       passageType: initialData?.passageType ?? null,
       questionType: initialData?.questionType ?? null,
       questionPattern: initialData?.questionPattern ?? null,
       answerType: initialData?.answerType ?? null,
+      userSelectedTags,
+      timeoutFlag,
     })
   }
+
+  const segmentOptions = PART_TAG_OPTIONS[partNumber] || []
+  const showTimeoutCheck = partNumber >= 5 && partNumber <= 7
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
@@ -121,6 +159,44 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
             </>
           ) : (
             <>
+              {/* STEP 4: 파트별 세부 태그 (여러 개 선택 가능) */}
+              {segmentOptions.length > 0 && (
+                <div className="space-y-3">
+                  <label className="block text-xs font-medium text-gray-500">🏷️ 세부 유형 선택 (여러 개 가능)</label>
+                  {segmentOptions.map((group, gi) => (
+                    <div key={gi}>
+                      <p className="text-xs text-gray-500 mb-1">{group.label}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.options.map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => toggleUserTag(opt)}
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                              userSelectedTags.includes(opt)
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showTimeoutCheck && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={timeoutFlag}
+                    onChange={(e) => setTimeoutFlag(e.target.checked)}
+                    className="rounded border-gray-300 text-primary-600"
+                  />
+                  <span className="text-sm text-gray-700">⏱️ 시간 부족으로 찍음</span>
+                </label>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">파트</label>
                 <input

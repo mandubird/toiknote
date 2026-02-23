@@ -44,6 +44,8 @@ export async function saveWrongNoteWithStats(userId, data) {
       p_question_type: data.questionType ?? null,
       p_question_pattern: data.questionPattern ?? null,
       p_answer_type: data.answerType ?? null,
+      p_user_selected_tags: Array.isArray(data.userSelectedTags) ? data.userSelectedTags : [],
+      p_timeout_flag: Boolean(data.timeoutFlag),
     })
 
     if (error) throw error
