@@ -18,8 +18,8 @@ export async function getUserProfile(userId) {
   const current = Number(data?.current_score)
   const target = Number(data?.target_score)
   return {
-    currentScore: current >= 0 && current <= 990 ? current : 0,
-    targetScore: target >= 0 && target <= 990 ? target : 900,
+    currentScore: current >= 200 && current <= 990 ? current : 0,
+    targetScore: target >= 200 && target <= 990 ? target : 900,
     usageCount: Number(data?.usage_count) || 0,
   }
 }
@@ -29,10 +29,12 @@ export async function getUserProfile(userId) {
  * @param {{ currentScore: number, targetScore: number }} data
  */
 export async function updateUserProfile(userId, data) {
-  const current = Math.min(990, Math.max(0, Number(data.currentScore) ?? 0))
-  const target = Math.min(990, Math.max(0, Number(data.targetScore) ?? 900))
-  await supabase.from('users').upsert(
+  const curVal = Number(data.currentScore)
+  const current = curVal >= 200 && curVal <= 990 ? curVal : null
+  const target = Math.min(990, Math.max(200, Number(data.targetScore) ?? 900))
+  const { error } = await supabase.from('users').upsert(
     { id: userId, current_score: current, target_score: target, last_updated: new Date().toISOString() },
     { onConflict: 'id' }
   )
+  if (error) throw error
 }

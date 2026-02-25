@@ -139,7 +139,14 @@ const Layout = () => {
       />
 
       {/* 결제 유도 모달 (5회 초과 시) */}
-      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        userId={user?.id}
+        userEmail={user?.email}
+        userDisplayName={user?.displayName}
+        onPaymentSuccess={() => setShowPaywall(false)}
+      />
 
       {/* 하단 탭바 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom">

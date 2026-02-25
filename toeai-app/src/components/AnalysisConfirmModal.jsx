@@ -36,6 +36,8 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
   const [partNumber, setPartNumber] = useState(5)
   const [userSelectedTags, setUserSelectedTags] = useState([])
   const [timeoutFlag, setTimeoutFlag] = useState(false)
+  const [solvingTime, setSolvingTime] = useState('')
+  const [rereadCount, setRereadCount] = useState('')
 
   useEffect(() => {
     if (open && initialData) {
@@ -50,6 +52,8 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       setPartNumber(initialData.partNumber >= 1 && initialData.partNumber <= 7 ? initialData.partNumber : 5)
       setUserSelectedTags([])
       setTimeoutFlag(false)
+      setSolvingTime('')
+      setRereadCount(initialData?.rereadCount != null ? String(initialData.rereadCount) : '')
     }
   }, [open, initialData])
 
@@ -67,6 +71,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
   }
 
   const handleSave = () => {
+    const rereadVal = rereadCount.trim() !== '' && /^\d+$/.test(rereadCount.trim()) ? parseInt(rereadCount.trim(), 10) : initialData?.rereadCount ?? null
     onSave({
       imageUrl,
       part,
@@ -85,6 +90,21 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       answerType: initialData?.answerType ?? null,
       userSelectedTags,
       timeoutFlag,
+      solvingTime: solvingTime.trim() !== '' && /^\d+$/.test(solvingTime.trim()) ? parseInt(solvingTime.trim(), 10) : null,
+      // v4.01 전파트
+      part1ImageTrapType: initialData?.part1ImageTrapType ?? null,
+      part1KeywordMissed: initialData?.part1KeywordMissed ?? null,
+      part1PassiveVoiceError: initialData?.part1PassiveVoiceError,
+      part3QuestionType: initialData?.part3QuestionType ?? null,
+      part3SetPosition: initialData?.part3SetPosition ?? null,
+      part3PreviewRead: initialData?.part3PreviewRead,
+      part3ConcentrationDrop: initialData?.part3ConcentrationDrop,
+      part4LectureType: initialData?.part4LectureType ?? null,
+      part4QuestionType: initialData?.part4QuestionType ?? null,
+      part4NoteTaking: initialData?.part4NoteTaking,
+      part6BlankType: initialData?.part6BlankType ?? null,
+      part6ContextFailReason: initialData?.part6ContextFailReason ?? null,
+      rereadCount: rereadVal,
     })
   }
 
@@ -143,16 +163,20 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                   )) : '-'}
                 </div>
               </div>
-              {/* STEP 3: 세부 분류 (Part 5 문법 / Part 7 유형 / Part 2 패턴) */}
-              {(initialData?.grammarCategory || initialData?.passageType || initialData?.questionPattern) && (
+              {/* STEP 3 + v4.01: 세부 분류 (전파트) */}
+              {(initialData?.grammarCategory || initialData?.passageType || initialData?.questionPattern || initialData?.part1ImageTrapType || initialData?.part3QuestionType || initialData?.part4LectureType || initialData?.part6BlankType || initialData?.rereadCount != null) && (
                 <div className="pt-2 border-t border-gray-100">
                   <label className="block text-xs font-medium text-gray-500 mb-1">AI 세부 분류</label>
                   <div className="text-xs text-gray-700 space-y-0.5">
-                    {initialData.grammarCategory && (
-                      <p>문법: {initialData.grammarCategory}{initialData.grammarSubType ? ` (${initialData.grammarSubType})` : ''}</p>
+                    {initialData.part1ImageTrapType && <p>Part 1 함정: {initialData.part1ImageTrapType}{initialData.part1KeywordMissed ? ` · 놓친 키워드: ${initialData.part1KeywordMissed}` : ''}{initialData.part1PassiveVoiceError ? ' · 수동태 오류' : ''}</p>}
+                    {initialData.questionPattern && <p>Part 2: {initialData.questionPattern} · {initialData.answerType || '-'}</p>}
+                    {initialData.part3QuestionType && <p>Part 3: {initialData.part3QuestionType}{initialData.part3SetPosition ? ` (${initialData.part3SetPosition}번 문제)` : ''}{initialData.part3ConcentrationDrop ? ' · 집중력 저하 추정' : ''}</p>}
+                    {initialData.part4LectureType && <p>Part 4: {initialData.part4LectureType} · {initialData.part4QuestionType || '-'}{initialData.part4NoteTaking ? ' · 노트테이킹' : ''}</p>}
+                    {initialData.grammarCategory && <p>Part 5 문법: {initialData.grammarCategory}{initialData.grammarSubType ? ` (${initialData.grammarSubType})` : ''}</p>}
+                    {initialData.part6BlankType && <p>Part 6: {initialData.part6BlankType}{initialData.part6ContextFailReason ? ` · ${initialData.part6ContextFailReason}` : ''}</p>}
+                    {(initialData.passageType || initialData.questionType || initialData.rereadCount != null) && (
+                      <p>Part 7: {[initialData.passageType, initialData.questionType].filter(Boolean).join(' · ') || '-'}{initialData.rereadCount != null ? ` · 재읽기 ${initialData.rereadCount}회` : ''}</p>
                     )}
-                    {initialData.passageType && <p>지문: {initialData.passageType} · {initialData.questionType || '-'}</p>}
-                    {initialData.questionPattern && <p>패턴: {initialData.questionPattern} · {initialData.answerType || '-'}</p>}
                   </div>
                 </div>
               )}
@@ -196,6 +220,34 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                   />
                   <span className="text-sm text-gray-700">⏱️ 시간 부족으로 찍음</span>
                 </label>
+              )}
+              {(partNumber === 5 || partNumber === 6 || partNumber === 7) && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">풀이 시간 (초, 선택)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={600}
+                    value={solvingTime}
+                    onChange={(e) => setSolvingTime(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    placeholder="예: 90"
+                  />
+                </div>
+              )}
+              {partNumber === 7 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">지문 재읽기 횟수 (선택)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={rereadCount}
+                    onChange={(e) => setRereadCount(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    placeholder="예: 1"
+                  />
+                </div>
               )}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">파트</label>

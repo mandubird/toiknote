@@ -77,12 +77,14 @@ npm run dev
 | **STEP 3** ✅ | GPT 세부 분류 (Part 5 문법, Part 7 유형, Part 2 패턴) | 완료 |
 | **STEP 4** ✅ | 2단계 팝업 UI (파트별 세부 태그, "시간 부족으로 찍음") | 완료. **Supabase**에서 `20260223000001_step4_user_tags_timeout.sql` 실행 필요 |
 | **STEP 5** | 트랜잭션 저장 정리 | 현재 RPC 사용 중, 필요 시 스키마 확장 |
-| **STEP 6** | 통계 페이지 강화 (Part 5 문법 막대, Part 7 시간 등) | tag_stats ↔ wrong_notes 스키마 맞추기 |
-| **STEP 7** | 전략 페이지 (AI 코칭, 24h 캐시) | 이미 기본 구현됨, 프롬프트·캐시 보강 |
-| **STEP 8** | 설정 페이지 (목표 점수 입력) | users 테이블 연동 |
-| **STEP 9** | 결제 연동 (Pro/Elite) | 포트원, Webhook |
+| **STEP 6** ✅ | 통계 페이지 강화 (Part 5 문법, Part 7 유형, Part 2 패턴, 시간 부족) | 완료 |
+| **STEP 7** ✅ | 전략 페이지 (AI 코칭, RC 시간 배분, 세부 문법 약점, 24h 캐시) | 완료. **Supabase**에서 `20260223000002_step7_score_analytics_rc_grammar.sql` 실행 필요 |
+| **STEP 8** ✅ | 설정 페이지 (목표 점수 입력) | 완료. 200~990 검증, users 테이블 저장·전략 페이지 반영 |
+| **STEP 9** ✅ | 결제 연동 (Pro/Elite) | 완료. **Supabase**에서 `20260223000003_step9_subscriptions_plan.sql` 실행 필요. 포트원 콘솔에서 Store ID·채널 키 발급 후 `.env.local`에 `VITE_PORTONE_STORE_ID`, `VITE_PORTONE_CHANNEL_KEY` 설정 |
+| **STEP 10** ✅ | 누락 보완 (풀이 시간, RC 동적 전략, 비율·유료 가리기) | 완료. **Supabase**에서 `20260223000004_step10_solving_time_rc_strategy.sql` 실행 필요 |
+| **v4.01** ✅ | 전파트 통합 DB (Part 1/3/4/6 세부 필드, Part 7 재독 횟수) | 완료. **Supabase**에서 `20260224000001_v401_part1346_reread.sql` 실행 필요 |
 
-**참고:** 개발계획서의 `wrong_notes`(전 파트 필드)는 현재 DB의 `wrong_answers`와 다릅니다. 전 파트 분석을 넣으려면 새 마이그레이션으로 컬럼 추가 또는 테이블 확장이 필요합니다.
+**참고:** 개발계획서 v4.01부터 `wrong_answers`에 Part 1/3/4/6 세부 컬럼과 Part 7 재독 횟수가 추가되었습니다.
 
 ---
 

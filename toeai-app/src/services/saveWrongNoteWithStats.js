@@ -46,6 +46,21 @@ export async function saveWrongNoteWithStats(userId, data) {
       p_answer_type: data.answerType ?? null,
       p_user_selected_tags: Array.isArray(data.userSelectedTags) ? data.userSelectedTags : [],
       p_timeout_flag: Boolean(data.timeoutFlag),
+      p_solving_time: data.solvingTime != null && data.solvingTime >= 0 ? Number(data.solvingTime) : null,
+      // v4.01 전파트
+      p_part1_image_trap_type: data.part1ImageTrapType ?? null,
+      p_part1_keyword_missed: data.part1KeywordMissed ?? null,
+      p_part1_passive_voice_error: data.part1PassiveVoiceError != null ? Boolean(data.part1PassiveVoiceError) : null,
+      p_part3_question_type: data.part3QuestionType ?? null,
+      p_part3_set_position: data.part3SetPosition >= 1 && data.part3SetPosition <= 3 ? data.part3SetPosition : null,
+      p_part3_preview_read: data.part3PreviewRead != null ? Boolean(data.part3PreviewRead) : null,
+      p_part3_concentration_drop: data.part3ConcentrationDrop != null ? Boolean(data.part3ConcentrationDrop) : null,
+      p_part4_lecture_type: data.part4LectureType ?? null,
+      p_part4_question_type: data.part4QuestionType ?? null,
+      p_part4_note_taking: data.part4NoteTaking != null ? Boolean(data.part4NoteTaking) : null,
+      p_part6_blank_type: data.part6BlankType ?? null,
+      p_part6_context_fail_reason: data.part6ContextFailReason ?? null,
+      p_reread_count: data.rereadCount != null && data.rereadCount >= 0 ? Number(data.rereadCount) : null,
     })
 
     if (error) throw error

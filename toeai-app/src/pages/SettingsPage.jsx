@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
-import { getSubscription, getFreeLimit } from '../services/subscription'
+import { getSubscription, getFreeLimit, setSubscriptionPlan } from '../services/subscription'
 import { getUserProfile, updateUserProfile } from '../services/userProfile'
+import { requestPlanPayment, PLANS } from '../services/portonePayment'
 
 const SettingsPage = () => {
   const { user, loading, signInWithGoogle, signOut } = useAuth()
   const [authError, setAuthError] = useState(null)
   const [savedCount, setSavedCount] = useState(0)
   const [subscribed, setSubscribed] = useState(false)
+  const [plan, setPlan] = useState('free')
   const [currentScore, setCurrentScore] = useState('')
   const [targetScore, setTargetScore] = useState('900')
   const [scoreSaving, setScoreSaving] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(null)
+  const [paymentError, setPaymentError] = useState(null)
   const freeLimit = getFreeLimit()
 
   useEffect(() => {
@@ -29,6 +33,7 @@ const SettingsPage = () => {
     ]).then(([list, sub, profile]) => {
       setSavedCount(list.length)
       setSubscribed(sub.paid)
+      setPlan(sub.plan || 'free')
       setCurrentScore(profile.currentScore ? String(profile.currentScore) : '')
       setTargetScore(profile.targetScore ? String(profile.targetScore) : '900')
     })
@@ -36,16 +41,17 @@ const SettingsPage = () => {
 
   const handleSaveScores = async () => {
     if (!user) return
-    const cur = parseInt(currentScore, 10)
+    const curRaw = currentScore.trim() === '' ? null : parseInt(currentScore, 10)
     const tgt = parseInt(targetScore, 10)
-    if (Number.isNaN(cur) || cur < 0 || cur > 990) {
-      alert('현재 점수는 0~990 사이로 입력해 주세요.')
+    if (curRaw !== null && (Number.isNaN(curRaw) || curRaw < 200 || curRaw > 990)) {
+      alert('현재 점수는 200~990 사이로 입력해 주세요. (비워두면 미입력)')
       return
     }
-    if (Number.isNaN(tgt) || tgt < 0 || tgt > 990) {
-      alert('목표 점수는 0~990 사이로 입력해 주세요.')
+    if (Number.isNaN(tgt) || tgt < 200 || tgt > 990) {
+      alert('목표 점수는 200~990 사이로 입력해 주세요.')
       return
     }
+    const cur = curRaw ?? 0
     setScoreSaving(true)
     try {
       await updateUserProfile(user.id, { currentScore: cur, targetScore: tgt })
@@ -69,6 +75,29 @@ const SettingsPage = () => {
   const handleSignOut = async () => {
     setAuthError(null)
     await signOut()
+  }
+
+  const handlePlanPayment = async (planKey) => {
+    if (!user || paymentLoading) return
+    setPaymentError(null)
+    setPaymentLoading(planKey)
+    try {
+      const result = await requestPlanPayment(planKey, {
+        customerEmail: user.email,
+        customerName: user.displayName || undefined,
+      })
+      if (result.success) {
+        await setSubscriptionPlan(user.id, planKey)
+        setSubscribed(true)
+        setPlan(planKey)
+      } else {
+        setPaymentError(result.message || '결제에 실패했어요.')
+      }
+    } catch (err) {
+      setPaymentError(err?.message || '결제 요청에 실패했어요.')
+    } finally {
+      setPaymentLoading(null)
+    }
   }
 
   return (
@@ -124,25 +153,25 @@ const SettingsPage = () => {
       {user && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <h3 className="font-semibold text-gray-900 mb-3">목표 점수</h3>
-          <p className="text-xs text-gray-500 mb-3">전략 분석에서 참고해요 (0~990)</p>
+          <p className="text-xs text-gray-500 mb-3">전략 분석에서 참고해요 (200~990)</p>
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">현재 점수</label>
               <input
                 type="number"
-                min={0}
+                min={200}
                 max={990}
                 value={currentScore}
                 onChange={(e) => setCurrentScore(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="700"
+                placeholder="700 (비워두면 미입력)"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">목표 점수</label>
               <input
                 type="number"
-                min={0}
+                min={200}
                 max={990}
                 value={targetScore}
                 onChange={(e) => setTargetScore(e.target.value)}
@@ -166,31 +195,43 @@ const SettingsPage = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
         <h3 className="font-semibold text-gray-900 mb-3">구독 현황</h3>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-gray-700">무료 체험</span>
+          <span className="text-sm text-gray-700">현재 플랜</span>
           <span className="text-sm font-semibold text-primary-600">
+            {plan === 'elite' ? 'Elite' : plan === 'pro' ? 'Pro' : 'FREE'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-gray-700">오답 저장</span>
+          <span className="text-sm text-gray-900">
             {freeLimit}개 중 {savedCount}개 사용
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-2">
-          무료: 오답 5문제 + 기본 분석(OCR, LC/RC·파트 분류, 해설)만 제공
+        <p className="text-xs text-gray-500 mb-3">
+          FREE: 오답 5문제 + 기본 분석. Pro/Elite: 무제한 + AI 전략·세부 통계
         </p>
-        {subscribed ? (
-          <p className="text-sm text-green-600 font-medium">유료 구독 중이에요</p>
-        ) : (
-          <p className="text-xs text-gray-500 mb-3">
-            {savedCount >= freeLimit ? '무료 한도를 다 썼어요. 결제 후 계속 이용할 수 있어요.' : '오답 5개까지 무료로 저장할 수 있어요.'}
-          </p>
+        {paymentError && (
+          <p className="text-xs text-red-600 mb-2">{paymentError}</p>
         )}
-
-        <div className="border-t border-gray-100 pt-3 mt-3 space-y-1 text-xs text-gray-600">
-          <p className="font-medium text-gray-700">요금</p>
-          <p>· 정규: 1개월 9,900원 / 2개월 16,900원 ⭐ / 5개월 39,900원</p>
-          <p>· 얼리버드: 첫 달 4,900원 (선착순 100명), 이후 정상 요금</p>
-        </div>
         {!subscribed && (
-          <button className="w-full mt-3 bg-gray-900 text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-colors text-sm">
-            얼리버드 첫 달 4,900원
-          </button>
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-700">요금제</p>
+            <button
+              type="button"
+              disabled={!!paymentLoading}
+              onClick={() => handlePlanPayment('pro')}
+              className="w-full py-2.5 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+            >
+              {paymentLoading === 'pro' ? '결제창 열림…' : `Pro ${PLANS.pro.amount.toLocaleString()}원/월`}
+            </button>
+            <button
+              type="button"
+              disabled={!!paymentLoading}
+              onClick={() => handlePlanPayment('elite')}
+              className="w-full py-2.5 px-4 rounded-lg border-2 border-primary-600 text-primary-600 text-sm font-medium hover:bg-primary-50 disabled:opacity-50"
+            >
+              {paymentLoading === 'elite' ? '결제창 열림…' : `Elite ${PLANS.elite.amount.toLocaleString()}원/월`}
+            </button>
+          </div>
         )}
       </div>
 

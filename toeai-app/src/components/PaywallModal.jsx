@@ -1,10 +1,31 @@
-const PaywallModal = ({ open, onClose }) => {
-  const paymentUrl = import.meta.env.VITE_PAYMENT_URL || ''
+import { useState } from 'react'
+import { requestPlanPayment, PLANS } from '../services/portonePayment'
+import { setSubscriptionPlan } from '../services/subscription'
 
-  const handlePayment = () => {
-    if (paymentUrl) {
-      window.open(paymentUrl, '_blank', 'noopener,noreferrer')
-      onClose()
+const PaywallModal = ({ open, onClose, userId, userEmail, userDisplayName, onPaymentSuccess }) => {
+  const [loading, setLoading] = useState(null)
+  const [error, setError] = useState(null)
+
+  const handlePlanPayment = async (planKey) => {
+    if (!userId) return
+    setError(null)
+    setLoading(planKey)
+    try {
+      const result = await requestPlanPayment(planKey, {
+        customerEmail: userEmail,
+        customerName: userDisplayName,
+      })
+      if (result.success) {
+        await setSubscriptionPlan(userId, planKey)
+        onPaymentSuccess?.()
+        onClose()
+      } else {
+        setError(result.message || '결제에 실패했어요.')
+      }
+    } catch (err) {
+      setError(err?.message || '결제 요청에 실패했어요.')
+    } finally {
+      setLoading(null)
     }
   }
 
@@ -18,25 +39,25 @@ const PaywallModal = ({ open, onClose }) => {
           <p className="text-sm text-gray-600 mb-3">
             유료 구독 시 <strong>오답 자동 집계 + AI 맞춤 전략 추천</strong>을 이용할 수 있어요.
           </p>
-
-          <div className="space-y-2 mb-3 text-xs text-gray-600">
-            <p className="font-medium text-gray-700">요금 안내</p>
-            <p>· 무료: 오답 5문제, 기본 분석만</p>
-            <p>· 정규: 1개월 9,900원 / 2개월 16,900원 ⭐ BEST / 5개월 39,900원</p>
-            <p>· 얼리버드: 첫 달 4,900원 (선착순 100명), 이후 정상 요금</p>
+          {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
+          <div className="space-y-2 mb-4">
+            <button
+              type="button"
+              disabled={!!loading}
+              onClick={() => handlePlanPayment('pro')}
+              className="w-full py-3 px-4 rounded-xl bg-primary-600 text-white font-medium text-sm hover:bg-primary-700 disabled:opacity-50"
+            >
+              {loading === 'pro' ? '결제창 열림…' : `Pro ${PLANS.pro.amount.toLocaleString()}원/월`}
+            </button>
+            <button
+              type="button"
+              disabled={!!loading}
+              onClick={() => handlePlanPayment('elite')}
+              className="w-full py-3 px-4 rounded-xl border-2 border-primary-600 text-primary-600 font-medium text-sm hover:bg-primary-50 disabled:opacity-50"
+            >
+              {loading === 'elite' ? '결제창 열림…' : `Elite ${PLANS.elite.amount.toLocaleString()}원/월`}
+            </button>
           </div>
-
-          <div className="bg-primary-50 rounded-xl p-4 mb-4">
-            <p className="text-2xl font-bold text-primary-700">얼리버드 첫 달 4,900원</p>
-            <p className="text-xs text-gray-600 mt-1">선착순 100명 한정 · 이후 정상 요금 (취소 가능)</p>
-          </div>
-
-          {!paymentUrl && (
-            <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-4">
-              결제 페이지 연동 예정이에요. 문의: support@toeicodap.com
-            </p>
-          )}
-
           <div className="flex gap-2">
             <button
               type="button"
@@ -44,14 +65,6 @@ const PaywallModal = ({ open, onClose }) => {
               className="flex-1 py-3 px-4 rounded-lg border border-gray-300 text-gray-700 font-medium text-sm"
             >
               닫기
-            </button>
-            <button
-              type="button"
-              onClick={handlePayment}
-              className="flex-1 py-3 px-4 rounded-lg bg-gray-900 text-white font-medium text-sm hover:bg-gray-800 disabled:opacity-50"
-              disabled={!paymentUrl}
-            >
-              결제하기
             </button>
           </div>
         </div>

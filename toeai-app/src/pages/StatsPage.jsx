@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchTagStats, calculateEstimatedScore } from '../services/fetchTagStats'
+import { fetchSegmentStats } from '../services/fetchSegmentStats'
+import { getSubscription } from '../services/subscription'
 
 const PART_LABELS = { 1: 'Part 1', 2: 'Part 2', 3: 'Part 3', 4: 'Part 4', 5: 'Part 5', 6: 'Part 6', 7: 'Part 7' }
 const CHART_COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a']
@@ -9,17 +11,29 @@ const CHART_COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8', '#1
 const StatsPage = () => {
   const { user } = useAuth()
   const [tagStats, setTagStats] = useState(null)
+  const [segmentStats, setSegmentStats] = useState(null)
+  const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!user) {
       setTagStats(null)
+      setSegmentStats(null)
+      setSubscribed(false)
       setLoading(false)
       return
     }
-    fetchTagStats(user.id)
-      .then(setTagStats)
-      .catch(() => setTagStats(null))
+    Promise.all([fetchTagStats(user.id), fetchSegmentStats(user.id), getSubscription(user.id)])
+      .then(([tags, segments, sub]) => {
+        setTagStats(tags)
+        setSegmentStats(segments)
+        setSubscribed(sub.paid)
+      })
+      .catch(() => {
+        setTagStats(null)
+        setSegmentStats(null)
+        setSubscribed(false)
+      })
       .finally(() => setLoading(false))
   }, [user])
 
@@ -128,6 +142,154 @@ const StatsPage = () => {
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* 세부 분석: 유료 전용 또는 블록들 */}
+      {!subscribed && (segmentStats?.totalPart5 > 0 || segmentStats?.totalPart7 > 0 || segmentStats?.part2Pattern?.length > 0) && (
+        <div className="bg-amber-50 rounded-lg border border-amber-200 p-4 mb-4">
+          <p className="text-sm font-medium text-amber-800">세부 문법·Part 7 유형·Part 2 패턴·시간 부족 분석은 유료 회원만 이용할 수 있어요.</p>
+          <p className="text-xs text-amber-700 mt-1">설정에서 Pro/Elite 구독 후 이용해 보세요.</p>
+        </div>
+      )}
+
+      {/* Part 5 문법 약점 (유료, 비율 표시) */}
+      {subscribed && segmentStats?.part5Grammar?.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Part 5 문법 약점</h3>
+          <p className="text-xs text-gray-500 mb-3">저장한 Part 5 오답 {segmentStats.totalPart5 || 0}개 기준 · 당신은 아래 유형에서 오답이 많아요</p>
+          <ResponsiveContainer width="100%" height={Math.max(120, segmentStats.part5Grammar.length * 32)}>
+            <BarChart
+              data={segmentStats.part5Grammar.map((d) => {
+                const totalPart5 = segmentStats.totalPart5 || 1
+                const pct = Math.round((d.count / totalPart5) * 100)
+                return { name: `${d.name} (${pct}%)`, nameRaw: d.name, count: d.count, pct }
+              })}
+              layout="vertical"
+              margin={{ left: 8, right: 8 }}
+            >
+              <XAxis type="number" />
+              <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value, name, props) => [`${value}개 (${props.payload.pct}%)`, '오답 수']} />
+              <Bar dataKey="count" fill="#2563eb" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Part 7 평균 풀이 시간 (유료) */}
+      {subscribed && segmentStats?.avgPart7TimeSeconds != null && segmentStats.avgPart7TimeSeconds > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-2">Part 7 평균 풀이 시간</h3>
+          <p className="text-2xl font-bold text-primary-600">
+            {segmentStats.avgPart7TimeSeconds >= 60
+              ? `${Math.floor(segmentStats.avgPart7TimeSeconds / 60)}분 ${segmentStats.avgPart7TimeSeconds % 60}초`
+              : `${segmentStats.avgPart7TimeSeconds}초`}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">풀이 시간을 입력한 Part 7 오답 기준 평균이에요.</p>
+        </div>
+      )}
+
+      {/* Part 7 유형 (유료, 비율 표시) */}
+      {subscribed && (segmentStats?.part7Passage?.length > 0 || segmentStats?.part7QuestionType?.length > 0) && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Part 7 유형별 오답</h3>
+          <p className="text-xs text-gray-500 mb-3">지문/질문 유형별 집계</p>
+          <p className="text-xs text-gray-500 mb-3">Part 7 오답 {segmentStats.totalPart7 || 0}개 기준</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {segmentStats.part7Passage?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-2">지문 유형</p>
+                <ResponsiveContainer width="100%" height={Math.max(100, segmentStats.part7Passage.length * 28)}>
+                  <BarChart
+                    data={segmentStats.part7Passage.map((d) => {
+                      const total = segmentStats.totalPart7 || 1
+                      return { name: `${d.name} (${Math.round((d.count / total) * 100)}%)`, count: d.count }
+                    })}
+                    layout="vertical"
+                    margin={{ left: 4, right: 4 }}
+                  >
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#1d4ed8" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {segmentStats.part7QuestionType?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-2">질문 유형</p>
+                <ResponsiveContainer width="100%" height={Math.max(100, segmentStats.part7QuestionType.length * 28)}>
+                  <BarChart
+                    data={segmentStats.part7QuestionType.map((d) => {
+                      const total = segmentStats.totalPart7 || 1
+                      return { name: `${d.name} (${Math.round((d.count / total) * 100)}%)`, count: d.count }
+                    })}
+                    layout="vertical"
+                    margin={{ left: 4, right: 4 }}
+                  >
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#1e40af" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Part 2 패턴 / 답 유형 (유료) */}
+      {subscribed && (segmentStats?.part2Pattern?.length > 0 || segmentStats?.part2AnswerType?.length > 0) && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Part 2 패턴·답 유형</h3>
+          <p className="text-xs text-gray-500 mb-3">질문 패턴/답 유형별 집계</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {segmentStats.part2Pattern?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-2">질문 패턴</p>
+                <ul className="space-y-1">
+                  {segmentStats.part2Pattern.slice(0, 6).map((d, i) => (
+                    <li key={i} className="flex justify-between text-sm">
+                      <span className="text-gray-700 truncate mr-2">{d.name}</span>
+                      <span className="font-medium text-gray-900">{d.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {segmentStats.part2AnswerType?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-2">답 유형</p>
+                <ul className="space-y-1">
+                  {segmentStats.part2AnswerType.slice(0, 6).map((d, i) => (
+                    <li key={i} className="flex justify-between text-sm">
+                      <span className="text-gray-700 truncate mr-2">{d.name}</span>
+                      <span className="font-medium text-gray-900">{d.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 시간 부족 비율 (유료) */}
+      {subscribed && segmentStats && segmentStats.totalCount > 0 && segmentStats.timeoutCount > 0 && (
+        <div className="bg-amber-50 rounded-lg border border-amber-200 p-4 mb-4">
+          <h3 className="font-semibold text-amber-900 mb-2">시간 부족으로 찍은 비율</h3>
+          <p className="text-sm text-amber-800">
+            전체 오답 <strong>{segmentStats.totalCount}개</strong> 중
+            <strong> {segmentStats.timeoutCount}개</strong>(
+            {Math.round((segmentStats.timeoutCount / segmentStats.totalCount) * 100)}%)가
+            &quot;시간 부족으로 찍음&quot;으로 표시되었어요.
+          </p>
+          <p className="text-xs text-amber-700 mt-2">
+            시간 관리 연습이나 문제 풀이 속도를 높이는 전략을 추천해요.
+          </p>
+        </div>
+      )}
 
       {/* LC vs RC */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
