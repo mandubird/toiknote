@@ -7,6 +7,7 @@ import StatsPage from './pages/StatsPage'
 import StrategyPage from './pages/StrategyPage'
 import SettingsPage from './pages/SettingsPage'
 import ProgramPage from './pages/ProgramPage'
+import DiagnosticPage from './pages/DiagnosticPage'
 import PaymentSuccessPage from './pages/PaymentSuccessPage'
 import PaymentFailPage from './pages/PaymentFailPage'
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="stats" element={<StatsPage />} />
             <Route path="strategy" element={<StrategyPage />} />
             <Route path="program" element={<ProgramPage />} />
+            <Route path="diagnostic" element={<DiagnosticPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

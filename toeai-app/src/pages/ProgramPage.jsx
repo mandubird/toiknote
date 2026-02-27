@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
   getProgramPlan,
   getWeeklyReports,
-  startPersonalizedProgram,
+  startProgramV403,
   advanceToNextWeek,
 } from '../services/programService'
-import { performCompleteDiagnosis } from '../services/diagnosisService'
+import { isDiagnosticCompleted } from '../services/diagnosticService'
+import { getSubscription } from '../services/subscription'
+import { getScorePrediction, updateScorePrediction } from '../services/scorePredictionService'
 
 const ProgramPage = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [plan, setPlan] = useState(null)
   const [reports, setReports] = useState([])
-  const [diagnosis, setDiagnosis] = useState(null)
+  const [diagnosticDone, setDiagnosticDone] = useState(false)
+  const [subscribed, setSubscribed] = useState(false)
+  const [scorePrediction, setScorePrediction] = useState(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
   const [advancing, setAdvancing] = useState(false)
@@ -22,20 +28,28 @@ const ProgramPage = () => {
     if (!user) {
       setPlan(null)
       setReports([])
-      setDiagnosis(null)
+      setDiagnosticDone(false)
       setLoading(false)
       return
     }
     setError(null)
     try {
-      const [p, r, d] = await Promise.all([
+      const [p, r, done, sub] = await Promise.all([
         getProgramPlan(user.id),
         getWeeklyReports(user.id),
-        performCompleteDiagnosis(user.id).catch(() => null),
+        isDiagnosticCompleted(user.id),
+        getSubscription(user.id),
       ])
       setPlan(p)
       setReports(r || [])
-      setDiagnosis(d)
+      setDiagnosticDone(!!done)
+      setSubscribed(!!sub.paid)
+      if (sub.paid && p?.currentWeek >= 4) {
+        const updated = await updateScorePrediction(user.id)
+        setScorePrediction(updated || await getScorePrediction(user.id))
+      } else {
+        setScorePrediction(null)
+      }
     } catch (e) {
       setError(e?.message || '불러오기 실패')
     } finally {
@@ -52,7 +66,7 @@ const ProgramPage = () => {
     setError(null)
     setStarting(true)
     try {
-      await startPersonalizedProgram(user.id)
+      await startProgramV403(user.id)
       await load()
     } catch (e) {
       setError(e?.message || '프로그램 시작에 실패했어요.')
@@ -93,34 +107,41 @@ const ProgramPage = () => {
 
   const currentPlan = plan?.plans?.find((p) => p.week === plan.currentWeek)
   const isActive = plan?.status === 'active'
-  const canAdvance = isActive && plan?.currentWeek >= 1 && plan?.currentWeek < 8
+  const currentWeek = plan?.currentWeek ?? 0
+  const freeLimitReached = !subscribed && currentWeek > 2
+  const canAdvance = isActive && currentWeek >= 1 && currentWeek < 8 && !freeLimitReached
+  const showScorePrediction = subscribed && currentWeek >= 4 && scorePrediction
 
   return (
     <div className="p-4 pb-8">
       <h2 className="text-lg font-bold text-gray-800 mb-1">8주 프로그램</h2>
       <p className="text-sm text-gray-500 mb-4">
-        점수 구간별 주차 학습 루틴과 주간 리포트로 진행해요.
+        진단 후 Week1부터 순차 진행해요. (무료: Week2까지 / Pro: Week8·PDF·점수예측)
       </p>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>
       )}
 
-      {plan?.status === 'none' && (
+      {plan?.status === 'none' && !diagnosticDone && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          {diagnosis && (
-            <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-100">
-              <p className="text-xs text-primary-600 font-medium mb-1">진단 결과</p>
-              <p className="text-sm text-gray-800">
-                {diagnosis.scoreRange} · {diagnosis.primaryWeakness || '약점 분석 중'}
-              </p>
-              {diagnosis.recommendedStrategy && (
-                <p className="text-xs text-gray-600 mt-1">{diagnosis.recommendedStrategy}</p>
-              )}
-            </div>
-          )}
           <p className="text-gray-700 mb-4">
-            현재 오답·점수 기준으로 <strong>맞춤 8주 루틴</strong>을 만들고, 주차별 미션과 주간 리포트를 제공해요.
+            <strong>진단 완료 전에는 Week1에 접근할 수 없어요.</strong> 먼저 정밀 진단을 진행해 주세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/diagnostic')}
+            className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
+          >
+            진단 먼저 하기
+          </button>
+        </div>
+      )}
+
+      {plan?.status === 'none' && diagnosticDone && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <p className="text-gray-700 mb-4">
+            진단이 완료되었어요. <strong>고정 8주 구조</strong>(1–2 RC, 3–4 Part7, 5–6 LC, 7–8 실전)로 Week1을 시작할까요?
           </p>
           <button
             type="button"
@@ -128,13 +149,27 @@ const ProgramPage = () => {
             disabled={starting}
             className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg disabled:opacity-50"
           >
-            {starting ? '시작 중…' : '8주 프로그램 시작하기'}
+            {starting ? '시작 중…' : 'Week1 시작하기'}
           </button>
         </div>
       )}
 
       {(plan?.status === 'active' || plan?.status === 'expired') && (
         <>
+          {freeLimitReached && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+              Week3부터는 <strong>Pro 구독</strong>이 필요해요. 설정에서 업그레이드할 수 있어요.
+            </div>
+          )}
+          {showScorePrediction && (
+            <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-100">
+              <p className="text-xs text-primary-600 font-medium">점수 예측 (Week4+)</p>
+              <p className="text-lg font-bold text-primary-700">{scorePrediction.predicted_score}점</p>
+              {scorePrediction.confidence_rate != null && (
+                <p className="text-xs text-gray-600">신뢰도 약 {Math.round(scorePrediction.confidence_rate)}%</p>
+              )}
+            </div>
+          )}
           <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm text-gray-500">현재 주차</span>
@@ -189,7 +224,10 @@ const ProgramPage = () => {
                         )}
                       </span>
                     </div>
-                    {r.next_week_strategy && (
+                    {r.ai_feedback && (
+                      <pre className="text-xs text-gray-600 mt-1 whitespace-pre-wrap font-sans">{r.ai_feedback}</pre>
+                    )}
+                    {!r.ai_feedback && r.next_week_strategy && (
                       <p className="text-sm text-gray-600 mt-1">{r.next_week_strategy}</p>
                     )}
                   </li>

@@ -78,6 +78,57 @@ export async function startProgram(userId) {
   return { targetRange, currentWeek: 1 }
 }
 
+/** v4.03: 고정 8주 구조 (1-2 RC, 3-4 Part7, 5-6 LC, 7-8 실전) */
+const V403_FIXED_WEEKS = [
+  { week: 1, focus_parts: [5, 6, 7], focus_tags: ['시제', '수일치', '관계대명사'], daily_task_count: 20, strategy_text: 'RC 집중 1주차: Part 5·6·7 기초' },
+  { week: 2, focus_parts: [5, 6, 7], focus_tags: ['접속사', '전치사', '문맥'], daily_task_count: 25, strategy_text: 'RC 집중 2주차: 문법·문맥 완성' },
+  { week: 3, focus_parts: [7], focus_tags: ['단일지문', '추론'], daily_task_count: 15, strategy_text: 'Part7 집중 1주차: 단일지문 속도' },
+  { week: 4, focus_parts: [7], focus_tags: ['이중지문', '삼중지문', 'Paraphrasing'], daily_task_count: 15, strategy_text: 'Part7 집중 2주차: 복수지문' },
+  { week: 5, focus_parts: [2, 3], focus_tags: ['우회답변', '세부정보'], daily_task_count: 25, strategy_text: 'LC 집중 1주차: Part 2·3' },
+  { week: 6, focus_parts: [1, 4], focus_tags: ['함정', '추론'], daily_task_count: 20, strategy_text: 'LC 집중 2주차: Part 1·4' },
+  { week: 7, focus_parts: [1, 2, 3, 4, 5, 6, 7], focus_tags: ['모의고사'], daily_task_count: 40, strategy_text: '실전 시뮬레이션' },
+  { week: 8, focus_parts: [5, 7], focus_tags: ['약점 집중'], daily_task_count: 25, strategy_text: '점수 예측 + 최종 전략' },
+]
+
+/**
+ * v4.03: 진단 완료 후 Week1 시작 (고정 8주 구조)
+ * @param {string} userId
+ */
+export async function startProgramV403(userId) {
+  if (!userId) throw new Error('로그인이 필요해요.')
+
+  const plans = V403_FIXED_WEEKS.map((p) => ({
+    user_id: userId,
+    week: p.week,
+    focus_tags: p.focus_tags || [],
+    focus_parts: p.focus_parts || [],
+    daily_task_count: p.daily_task_count ?? 20,
+    strategy_text: p.strategy_text || '',
+  }))
+
+  const { error: insertErr } = await supabase.from('user_program_plans').upsert(plans, { onConflict: 'user_id,week' })
+  if (insertErr) throw insertErr
+
+  const startDate = new Date()
+  const endDate = new Date(startDate)
+  endDate.setDate(endDate.getDate() + 56)
+
+  const { error: userErr } = await supabase
+    .from('users')
+    .update({
+      program_status: 'active',
+      program_start_date: startDate.toISOString(),
+      program_end_date: endDate.toISOString(),
+      current_week: 1,
+      last_week_update: startDate.toISOString(),
+    })
+    .eq('id', userId)
+  if (userErr) throw userErr
+
+  await createWeekStartSnapshot(userId, 1).catch(() => {})
+  return { currentWeek: 1 }
+}
+
 /** v4.02: 약점 유형 → 포커스 태그 배열 */
 function getTagsForWeakness(weakness) {
   const map = {
@@ -281,6 +332,8 @@ export async function generateWeeklyReport(userId, week) {
     wrong_reduction_rate: null,
     wrong_reduction_count: null,
     next_week_strategy: nextWeekStrategy,
+    completion_rate: null,
+    ai_feedback: null,
   }
 
   if (startSnap && endSnap) {
@@ -300,6 +353,14 @@ export async function generateWeeklyReport(userId, week) {
       const e = Number((endSnap.tag_wrong_counts && endSnap.tag_wrong_counts[tag]) || 0)
       tagImprovement[tag] = { start: s, end: e, reduction: s - e }
     })
+    const accChangeText = accuracyStart != null && accuracyEnd != null
+      ? (accuracyEnd - accuracyStart >= 0 ? `+${Math.round((accuracyEnd - accuracyStart) * 10) / 10}%` : `${Math.round((accuracyEnd - accuracyStart) * 10) / 10}%`)
+      : '-'
+    const line1 = `현재 정확도: ${accuracyEnd != null ? Math.round(accuracyEnd * 10) / 10 : '-'}%`
+    const line2 = `전주 대비 변화: ${accChangeText}`
+    const line3 = nextPlan?.strategy_text ? `이번 주 집중: ${nextPlan.strategy_text}` : '이번 주 집중 포인트를 유지해 주세요.'
+    const line4 = nextWeekStrategy ? `다음 주 전략: ${nextWeekStrategy}` : '다음 주에도 꾸준히 진행해 주세요.'
+    const aiFeedback = [line1, line2, line3, line4].join('\n')
     payload = {
       ...payload,
       estimated_score_start: startSnap.estimated_score != null ? Number(startSnap.estimated_score) : null,
@@ -309,6 +370,8 @@ export async function generateWeeklyReport(userId, week) {
       weak_tags_improvement: tagImprovement,
       wrong_reduction_rate: wrongReductionRate,
       wrong_reduction_count: reductionCount,
+      completion_rate: 100,
+      ai_feedback: aiFeedback,
     }
   }
 
