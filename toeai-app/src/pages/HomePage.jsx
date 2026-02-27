@@ -1,30 +1,42 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useListVersion } from '../contexts/RefreshListContext'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
+import { getDashboardSummary } from '../services/programService'
 
 const PARTS = ['Part 1', 'Part 2', 'Part 3', 'Part 4', 'Part 5', 'Part 6', 'Part 7']
 
 const HomePage = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const listVersion = useListVersion()
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [dashboard, setDashboard] = useState(null)
   const [selectedPart, setSelectedPart] = useState(null)
   const [selectedTag, setSelectedTag] = useState(null)
 
   useEffect(() => {
     if (!user) {
       setQuestions([])
+      setDashboard(null)
       setLoading(false)
       return
     }
     setLoading(true)
-    fetchWrongAnswers(user.id)
-      .then(setQuestions)
+    Promise.all([
+      fetchWrongAnswers(user.id),
+      getDashboardSummary(user.id),
+    ])
+      .then(([q, d]) => {
+        setQuestions(q || [])
+        setDashboard(d)
+      })
       .catch((err) => {
-        console.error('오답 목록 조회 실패:', err)
+        console.error('조회 실패:', err)
         setQuestions([])
+        setDashboard(null)
       })
       .finally(() => setLoading(false))
   }, [user, listVersion])
@@ -54,8 +66,51 @@ const HomePage = () => {
     return `${y}.${m}.${d}`
   }
 
+  const showDashboard = user && dashboard && dashboard.current_week >= 1
+
   return (
     <div className="p-4">
+      {showDashboard && (
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-3">코칭 대시보드</h2>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <p className="text-xs text-gray-500 mb-1">현재 주차</p>
+              <p className="text-xl font-bold text-primary-600">{dashboard.current_week || 0}주차</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <p className="text-xs text-gray-500 mb-1">예상 점수</p>
+              <p className="text-xl font-bold text-primary-600">{dashboard.predicted_score ?? '-'}점</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <p className="text-xs text-gray-500 mb-1">목표 점수</p>
+              <p className="text-xl font-bold text-gray-800">{dashboard.target_score ?? '-'}점</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm col-span-2">
+              <p className="text-xs text-gray-500 mb-1">이번 주 미션</p>
+              <p className="text-sm font-medium text-gray-800">{dashboard.weekly_mission ?? '-'}</p>
+            </div>
+          </div>
+          {(dashboard.accuracy_change != null || dashboard.part7_time_change != null) && (
+            <div className="flex gap-3 text-sm text-gray-600">
+              {dashboard.accuracy_change != null && (
+                <span>정확도 변화: {dashboard.accuracy_change >= 0 ? '+' : ''}{dashboard.accuracy_change}%</span>
+              )}
+              {dashboard.part7_time_change != null && (
+                <span>Part7 시간: {dashboard.part7_time_change >= 0 ? '+' : ''}{dashboard.part7_time_change}초</span>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/program')}
+            className="mt-3 text-sm text-primary-600 font-medium"
+          >
+            8주 프로그램 상세 →
+          </button>
+        </div>
+      )}
+
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">내 오답노트</h2>
         <p className="text-sm text-gray-600">

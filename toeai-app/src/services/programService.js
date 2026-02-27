@@ -277,6 +277,33 @@ export async function getProgramPlan(userId) {
 }
 
 /**
+ * v4.04: 대시보드 요약 (코칭 화면용)
+ * @param {string} userId
+ * @returns {Promise<{ current_week: number, predicted_score: number|null, target_score: number|null, weekly_mission: string|null, accuracy_change: number|null, part7_time_change: number|null }>}
+ */
+export async function getDashboardSummary(userId) {
+  if (!userId) {
+    return { current_week: 0, predicted_score: null, target_score: null, weekly_mission: null, accuracy_change: null, part7_time_change: null }
+  }
+  const [plan, reports, profile, { data: scorePred }] = await Promise.all([
+    getProgramPlan(userId),
+    getWeeklyReports(userId),
+    getUserProfile(userId),
+    supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
+  ])
+  const currentPlan = plan?.plans?.find((p) => p.week === plan.currentWeek)
+  const lastReport = reports?.length ? reports[reports.length - 1] : null
+  return {
+    current_week: plan?.currentWeek ?? 0,
+    predicted_score: scorePred?.predicted_score ?? null,
+    target_score: profile?.targetScore ?? null,
+    weekly_mission: currentPlan?.strategy_text ?? null,
+    accuracy_change: lastReport?.accuracy_change ?? null,
+    part7_time_change: lastReport?.part7_time_change ?? null,
+  }
+}
+
+/**
  * 주간 리포트 목록 조회
  * @param {string} userId
  */
@@ -400,7 +427,7 @@ export async function advanceToNextWeek(userId) {
     .update({
       current_week: nextWeek,
       last_week_update: new Date().toISOString(),
-      ...(nextWeek >= 8 ? { program_status: 'expired' } : {}),
+      ...(nextWeek >= 8 ? { program_status: 'completed' } : {}),
     })
     .eq('id', userId)
   if (error) throw error

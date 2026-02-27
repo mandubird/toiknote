@@ -3,12 +3,13 @@ import { fetchTagStats, calculateEstimatedScore } from './fetchTagStats'
 import { getUserProfile } from './userProfile'
 
 /**
- * 점수로 구간 라벨 반환 (600-700, 700-800, 800-900)
+ * 점수로 구간 라벨 반환 (v4.04: 600-700, 700-800, 800-900, 900+)
  * @param {number} score
- * @returns {string}
+ * @returns {'600-700'|'700-800'|'800-900'|'900+'}
  */
 export function getScoreRange(score) {
   const s = Number(score) || 0
+  if (s >= 900) return '900+'
   if (s >= 800) return '800-900'
   if (s >= 700) return '700-800'
   return '600-700'

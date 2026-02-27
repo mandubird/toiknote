@@ -10,6 +10,7 @@ import {
 import { isDiagnosticCompleted } from '../services/diagnosticService'
 import { getSubscription } from '../services/subscription'
 import { getScorePrediction, updateScorePrediction } from '../services/scorePredictionService'
+import { downloadWeeklyReportAsPdf } from '../services/weeklyReportPdf'
 
 const ProgramPage = () => {
   const { user } = useAuth()
@@ -141,20 +142,33 @@ const ProgramPage = () => {
       {plan?.status === 'none' && diagnosticDone && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <p className="text-gray-700 mb-4">
-            진단이 완료되었어요. <strong>고정 8주 구조</strong>(1–2 RC, 3–4 Part7, 5–6 LC, 7–8 실전)로 Week1을 시작할까요?
+            진단이 완료되었어요. <strong>고정 8주 구조</strong>(1–2 RC, 3–4 Part7, 5–6 LC, 7–8 실전)로 진행해요. 결제 후 Week1이 시작돼요.
           </p>
-          <button
-            type="button"
-            onClick={handleStart}
-            disabled={starting}
-            className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg disabled:opacity-50"
-          >
-            {starting ? '시작 중…' : 'Week1 시작하기'}
-          </button>
+          {subscribed ? (
+            <button
+              type="button"
+              onClick={handleStart}
+              disabled={starting}
+              className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg disabled:opacity-50"
+            >
+              {starting ? '시작 중…' : 'Week1 시작하기'}
+            </button>
+          ) : (
+            <>
+              <p className="text-sm text-amber-700 mb-3">8주 프로그램을 시작하려면 Pro 구독이 필요해요.</p>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
+              >
+                결제하고 Week1 시작하기
+              </button>
+            </>
+          )}
         </div>
       )}
 
-      {(plan?.status === 'active' || plan?.status === 'expired') && (
+      {(plan?.status === 'active' || plan?.status === 'expired' || plan?.status === 'completed') && (
         <>
           {freeLimitReached && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
@@ -174,7 +188,7 @@ const ProgramPage = () => {
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm text-gray-500">현재 주차</span>
               <span className="text-lg font-bold text-primary-600">
-                {plan.currentWeek}주차 {plan.status === 'expired' && '(종료)'}
+                {plan.currentWeek}주차 {plan.status === 'expired' && '(종료)'} {plan.status === 'completed' && '(완료)'}
               </span>
             </div>
             {currentPlan && (
@@ -217,11 +231,20 @@ const ProgramPage = () => {
                   <li key={r.id} className="px-4 py-3">
                     <div className="flex justify-between items-start">
                       <span className="font-medium text-gray-700">{r.week}주차</span>
-                      <span className="text-sm text-primary-600">
-                        {r.estimated_score_end != null && `예상 ${r.estimated_score_end}점`}
-                        {r.wrong_reduction_rate != null && (
-                          <span className="text-green-600 ml-1">· 오답 {r.wrong_reduction_rate}%↓</span>
-                        )}
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm text-primary-600">
+                          {r.estimated_score_end != null && `예상 ${r.estimated_score_end}점`}
+                          {r.wrong_reduction_rate != null && (
+                            <span className="text-green-600 ml-1">· 오답 {r.wrong_reduction_rate}%↓</span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => downloadWeeklyReportAsPdf(r)}
+                          className="text-xs text-primary-600 hover:underline"
+                        >
+                          PDF
+                        </button>
                       </span>
                     </div>
                     {r.ai_feedback && (

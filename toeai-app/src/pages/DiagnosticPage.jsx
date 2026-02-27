@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../contexts/AuthContext'
-import { getLatestDiagnostic, saveDiagnosticResult, isDiagnosticCompleted } from '../services/diagnosticService'
-import { startProgramV403 } from '../services/programService'
+import { getLatestDiagnostic, saveDiagnosticResult } from '../services/diagnosticService'
 
 const DiagnosticPage = () => {
   const { user } = useAuth()
@@ -11,7 +10,6 @@ const DiagnosticPage = () => {
   const [diagnostic, setDiagnostic] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [starting, setStarting] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -36,20 +34,6 @@ const DiagnosticPage = () => {
       setError(e?.message || '진단 저장에 실패했어요.')
     } finally {
       setSaving(false)
-    }
-  }
-
-  const handleStartWeek1 = async () => {
-    if (!user) return
-    setError(null)
-    setStarting(true)
-    try {
-      await startProgramV403(user.id)
-      navigate('/program')
-    } catch (e) {
-      setError(e?.message || 'Week1 시작에 실패했어요.')
-    } finally {
-      setStarting(false)
     }
   }
 
@@ -124,21 +108,13 @@ const DiagnosticPage = () => {
             )}
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-            <p className="text-gray-700 mb-4">진단이 완료되었어요. 8주 프로그램 Week1을 시작할까요?</p>
-            <button
-              type="button"
-              onClick={handleStartWeek1}
-              disabled={starting}
-              className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg disabled:opacity-50"
-            >
-              {starting ? '시작 중…' : 'Week1 시작하기'}
-            </button>
+            <p className="text-gray-700 mb-4">진단이 완료되었어요. 8주 프로그램은 결제 후 Week1이 시작돼요. 프로그램 화면에서 결제하고 시작할 수 있어요.</p>
             <button
               type="button"
               onClick={() => navigate('/program')}
-              className="w-full mt-2 py-2 border border-gray-300 text-gray-700 rounded-lg"
+              className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
             >
-              프로그램으로 이동
+              8주 프로그램 보기
             </button>
           </div>
         </>

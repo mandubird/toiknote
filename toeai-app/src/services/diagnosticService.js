@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
-import { fetchTagStats, calculateEstimatedScore } from './fetchTagStats'
+import { fetchTagStats } from './fetchTagStats'
+import { getScoreRange } from './diagnosisService'
 
 /**
  * v4.03: 진단 결과 저장 (LC/RC/Part5,6,7 추정)
@@ -49,10 +50,12 @@ export async function saveDiagnosticResult(userId) {
     .single()
   if (error) throw error
 
+  const scoreRange = getScoreRange(overall)
   await supabase
     .from('users')
     .update({
       diagnostic_completed_at: data?.created_at ?? new Date().toISOString(),
+      score_range: scoreRange,
     })
     .eq('id', userId)
 
