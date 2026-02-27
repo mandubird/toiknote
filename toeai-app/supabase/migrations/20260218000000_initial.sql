@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "users_select_own" ON public.users;
+DROP POLICY IF EXISTS "users_insert_own" ON public.users;
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
 CREATE POLICY "users_select_own" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "users_insert_own" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "users_update_own" ON public.users FOR UPDATE USING (auth.uid() = id);
@@ -37,6 +40,8 @@ CREATE INDEX IF NOT EXISTS wrong_answers_user_created ON public.wrong_answers(us
 
 ALTER TABLE public.wrong_answers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "wrong_answers_select_own" ON public.wrong_answers;
+DROP POLICY IF EXISTS "wrong_answers_insert_own" ON public.wrong_answers;
 CREATE POLICY "wrong_answers_select_own" ON public.wrong_answers FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "wrong_answers_insert_own" ON public.wrong_answers FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -53,6 +58,9 @@ CREATE TABLE IF NOT EXISTS public.tag_stats (
 
 ALTER TABLE public.tag_stats ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "tag_stats_select_own" ON public.tag_stats;
+DROP POLICY IF EXISTS "tag_stats_insert_own" ON public.tag_stats;
+DROP POLICY IF EXISTS "tag_stats_update_own" ON public.tag_stats;
 CREATE POLICY "tag_stats_select_own" ON public.tag_stats FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "tag_stats_insert_own" ON public.tag_stats FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "tag_stats_update_own" ON public.tag_stats FOR UPDATE USING (auth.uid() = user_id);
@@ -70,6 +78,9 @@ CREATE TABLE IF NOT EXISTS public.score_analytics (
 
 ALTER TABLE public.score_analytics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "score_analytics_select_own" ON public.score_analytics;
+DROP POLICY IF EXISTS "score_analytics_insert_own" ON public.score_analytics;
+DROP POLICY IF EXISTS "score_analytics_update_own" ON public.score_analytics;
 CREATE POLICY "score_analytics_select_own" ON public.score_analytics FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "score_analytics_insert_own" ON public.score_analytics FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "score_analytics_update_own" ON public.score_analytics FOR UPDATE USING (auth.uid() = user_id);
@@ -83,6 +94,9 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "subscriptions_select_own" ON public.subscriptions;
+DROP POLICY IF EXISTS "subscriptions_insert_own" ON public.subscriptions;
+DROP POLICY IF EXISTS "subscriptions_update_own" ON public.subscriptions;
 CREATE POLICY "subscriptions_select_own" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "subscriptions_insert_own" ON public.subscriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "subscriptions_update_own" ON public.subscriptions FOR UPDATE USING (auth.uid() = user_id);

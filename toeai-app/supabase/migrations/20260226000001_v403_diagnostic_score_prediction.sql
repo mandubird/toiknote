@@ -17,6 +17,8 @@ CREATE INDEX IF NOT EXISTS idx_diagnostic_results_user_id ON public.diagnostic_r
 CREATE INDEX IF NOT EXISTS idx_diagnostic_results_created_at ON public.diagnostic_results(user_id, created_at DESC);
 
 ALTER TABLE public.diagnostic_results ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "diagnostic_results_select_own" ON public.diagnostic_results;
+DROP POLICY IF EXISTS "diagnostic_results_insert_own" ON public.diagnostic_results;
 CREATE POLICY "diagnostic_results_select_own" ON public.diagnostic_results FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "diagnostic_results_insert_own" ON public.diagnostic_results FOR INSERT WITH CHECK (auth.uid() = user_id);
 
@@ -32,10 +34,40 @@ CREATE TABLE IF NOT EXISTS public.score_prediction (
 );
 
 ALTER TABLE public.score_prediction ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "score_prediction_select_own" ON public.score_prediction;
+DROP POLICY IF EXISTS "score_prediction_insert_own" ON public.score_prediction;
+DROP POLICY IF EXISTS "score_prediction_update_own" ON public.score_prediction;
 CREATE POLICY "score_prediction_select_own" ON public.score_prediction FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "score_prediction_insert_own" ON public.score_prediction FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "score_prediction_update_own" ON public.score_prediction FOR UPDATE USING (auth.uid() = user_id);
 
--- 4) weekly_reports 확장: completion_rate(0~100), ai_feedback(4줄 코치 멘트)
+-- 4) weekly_reports (없으면 생성 후) 확장: completion_rate, ai_feedback
+CREATE TABLE IF NOT EXISTS public.weekly_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  week INT NOT NULL CHECK (week >= 1 AND week <= 8),
+  accuracy_change NUMERIC DEFAULT NULL,
+  part7_time_change INT DEFAULT NULL,
+  weak_tags_improvement JSONB DEFAULT '{}',
+  estimated_score_start INT DEFAULT NULL,
+  estimated_score_end INT DEFAULT NULL,
+  score_improvement INT DEFAULT NULL,
+  next_week_strategy TEXT DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, week)
+);
+CREATE INDEX IF NOT EXISTS idx_weekly_reports_user_id ON public.weekly_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_weekly_reports_week ON public.weekly_reports(week);
+ALTER TABLE public.weekly_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "weekly_reports_select_own" ON public.weekly_reports;
+DROP POLICY IF EXISTS "weekly_reports_insert_own" ON public.weekly_reports;
+DROP POLICY IF EXISTS "weekly_reports_update_own" ON public.weekly_reports;
+CREATE POLICY "weekly_reports_select_own" ON public.weekly_reports FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "weekly_reports_insert_own" ON public.weekly_reports FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "weekly_reports_update_own" ON public.weekly_reports FOR UPDATE USING (auth.uid() = user_id);
+
 ALTER TABLE public.weekly_reports ADD COLUMN IF NOT EXISTS completion_rate NUMERIC DEFAULT NULL;
 ALTER TABLE public.weekly_reports ADD COLUMN IF NOT EXISTS ai_feedback TEXT DEFAULT NULL;
+ALTER TABLE public.weekly_reports ADD COLUMN IF NOT EXISTS wrong_reduction_rate NUMERIC DEFAULT NULL;
+ALTER TABLE public.weekly_reports ADD COLUMN IF NOT EXISTS wrong_reduction_count INT DEFAULT NULL;
+ALTER TABLE public.weekly_reports ADD COLUMN IF NOT EXISTS pdf_storage_path TEXT DEFAULT NULL;
