@@ -100,9 +100,18 @@ const Layout = () => {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* 상단 헤더 */}
       <header className="bg-white border-b border-gray-200 safe-area-top">
-        <div className="px-4 py-3">
-          <h1 className="text-xl font-bold text-primary-600">토답</h1>
-          <p className="text-xs text-gray-500">사진 한 장으로 끝내는 오답 정리</p>
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-primary-600">토답</h1>
+            <p className="text-xs text-gray-500">사진 한 장으로 끝내는 오답 정리</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/landing')}
+            className="text-sm font-medium text-primary-600 hover:underline"
+          >
+            900 점프
+          </button>
         </div>
       </header>
 

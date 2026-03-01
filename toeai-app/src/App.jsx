@@ -14,6 +14,7 @@ import ReportPage from './pages/ReportPage'
 import UpgradePage from './pages/UpgradePage'
 import PaymentSuccessPage from './pages/PaymentSuccessPage'
 import PaymentFailPage from './pages/PaymentFailPage'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <BrowserRouter>
         <RefreshListProvider>
         <Routes>
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/fail" element={<PaymentFailPage />} />
           <Route path="/" element={<Layout />}>

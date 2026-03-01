@@ -2,6 +2,10 @@ import { supabase } from '../lib/supabase'
 import { getWeeklyReports } from './programService'
 import { fetchTagStats, calculateEstimatedScore } from './fetchTagStats'
 import { fetchSegmentStats } from './fetchSegmentStats'
+import { calculateEstimatedScoreV42 } from './scoreEstimateV42'
+
+/** Part7 문항 수 (전체 섹션 분 계산용) */
+const PART7_QUESTION_COUNT = 54
 
 /**
  * v4.04: Part7 시간 패널티 (1문제 평균 75초 기준)
@@ -16,7 +20,7 @@ function getPart7TimePenalty(avgPart7Seconds) {
 }
 
 /**
- * v4.03/v4.04: 점수 예측 = (LC/RC 기반 추정) - Part7 시간 패널티 → score_prediction 저장
+ * v4.03/v4.04 + v4.2: 점수 예측 (가중치 적용 시 v4.2, 아니면 LC/RC - Part7패널티)
  * 노출: Week4+ & Pro 전용
  * @param {string} userId
  * @returns {Promise<{ predicted_score: number, confidence_rate: number }|null>}
@@ -32,10 +36,20 @@ export async function updateScorePrediction(userId) {
     fetchTagStats(userId),
     fetchSegmentStats(userId),
   ])
-  const baseScore = calculateEstimatedScore(tagStats, 100, 100)
-  const part7Penalty = getPart7TimePenalty(segmentStats?.avgPart7TimeSeconds ?? null)
-  const predicted = Math.round(baseScore - part7Penalty)
-  const clamped = Math.max(0, Math.min(990, predicted))
+
+  let clamped
+  try {
+    const part7AvgMinutes =
+      segmentStats?.avgPart7TimeSeconds != null
+        ? (segmentStats.avgPart7TimeSeconds * PART7_QUESTION_COUNT) / 60
+        : null
+    const v42 = await calculateEstimatedScoreV42(userId, tagStats, part7AvgMinutes)
+    clamped = Math.max(0, Math.min(990, v42.estimatedScore))
+  } catch (_) {
+    const baseScore = calculateEstimatedScore(tagStats, 100, 100)
+    const part7Penalty = getPart7TimePenalty(segmentStats?.avgPart7TimeSeconds ?? null)
+    clamped = Math.max(0, Math.min(990, Math.round(baseScore - part7Penalty)))
+  }
 
   const avgEndScore = recent3.reduce((s, r) => s + (r.estimated_score_end || 0), 0) / recent3.length
   const trend = recent3.length >= 2
