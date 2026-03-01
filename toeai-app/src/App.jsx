@@ -8,6 +8,10 @@ import StrategyPage from './pages/StrategyPage'
 import SettingsPage from './pages/SettingsPage'
 import ProgramPage from './pages/ProgramPage'
 import DiagnosticPage from './pages/DiagnosticPage'
+import DashboardPage from './pages/DashboardPage'
+import WeekPage from './pages/WeekPage'
+import ReportPage from './pages/ReportPage'
+import UpgradePage from './pages/UpgradePage'
 import PaymentSuccessPage from './pages/PaymentSuccessPage'
 import PaymentFailPage from './pages/PaymentFailPage'
 
@@ -21,6 +25,10 @@ function App() {
           <Route path="/payment/fail" element={<PaymentFailPage />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="week/:weekNumber" element={<WeekPage />} />
+            <Route path="report/:weekNumber" element={<ReportPage />} />
+            <Route path="upgrade" element={<UpgradePage />} />
             <Route path="stats" element={<StatsPage />} />
             <Route path="strategy" element={<StrategyPage />} />
             <Route path="program" element={<ProgramPage />} />

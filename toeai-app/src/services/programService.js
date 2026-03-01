@@ -276,23 +276,59 @@ export async function getProgramPlan(userId) {
   }
 }
 
+const DAYS_TOTAL = 60
+
 /**
- * v4.04: 대시보드 요약 (코칭 화면용)
+ * v4.04 + v4.1: 대시보드 요약 (코칭 화면·60일 진행바·약점 TOP3·점수 이력)
  * @param {string} userId
- * @returns {Promise<{ current_week: number, predicted_score: number|null, target_score: number|null, weekly_mission: string|null, accuracy_change: number|null, part7_time_change: number|null }>}
  */
 export async function getDashboardSummary(userId) {
-  if (!userId) {
-    return { current_week: 0, predicted_score: null, target_score: null, weekly_mission: null, accuracy_change: null, part7_time_change: null }
+  const empty = {
+    current_week: 0,
+    predicted_score: null,
+    target_score: null,
+    weekly_mission: null,
+    accuracy_change: null,
+    part7_time_change: null,
+    days_elapsed: 0,
+    days_total: DAYS_TOTAL,
+    programStartDate: null,
+    programEndDate: null,
+    weakness_top3: [],
+    score_history: [],
   }
-  const [plan, reports, profile, { data: scorePred }] = await Promise.all([
+  if (!userId) return empty
+
+  const [plan, reports, profile, { data: scorePred }, tagStats] = await Promise.all([
     getProgramPlan(userId),
     getWeeklyReports(userId),
     getUserProfile(userId),
     supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
+    fetchTagStats(userId),
   ])
+
   const currentPlan = plan?.plans?.find((p) => p.week === plan.currentWeek)
   const lastReport = reports?.length ? reports[reports.length - 1] : null
+
+  let daysElapsed = 0
+  if (plan?.programStartDate) {
+    const start = new Date(plan.programStartDate)
+    const end = plan.programEndDate ? new Date(plan.programEndDate) : new Date()
+    daysElapsed = Math.min(DAYS_TOTAL, Math.max(0, Math.floor((end - start) / (24 * 60 * 60 * 1000))))
+  }
+
+  const totalWrong = tagStats?.totalWrong || 1
+  const weaknessTop3 = Object.entries(tagStats?.tagCounts || {})
+    .map(([tag, count]) => ({ tag, count, rate: Math.round((Number(count) / totalWrong) * 1000) / 10 }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+
+  const scoreHistory = (reports || []).map((r) => ({
+    week: r.week,
+    score: r.estimated_score_end ?? null,
+    label: `Week ${r.week}`,
+  })).filter((d) => d.score != null)
+
   return {
     current_week: plan?.currentWeek ?? 0,
     predicted_score: scorePred?.predicted_score ?? null,
@@ -300,6 +336,12 @@ export async function getDashboardSummary(userId) {
     weekly_mission: currentPlan?.strategy_text ?? null,
     accuracy_change: lastReport?.accuracy_change ?? null,
     part7_time_change: lastReport?.part7_time_change ?? null,
+    days_elapsed: daysElapsed,
+    days_total: DAYS_TOTAL,
+    programStartDate: plan?.programStartDate ?? null,
+    programEndDate: plan?.programEndDate ?? null,
+    weakness_top3: weaknessTop3,
+    score_history: scoreHistory,
   }
 }
 
