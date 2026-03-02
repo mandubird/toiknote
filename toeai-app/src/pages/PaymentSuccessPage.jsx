@@ -5,6 +5,7 @@ import { setSubscriptionPaid } from '../services/subscription'
 import { isDiagnosticCompleted } from '../services/diagnosticService'
 import { getProgramPlan } from '../services/programService'
 import { startProgramV403 } from '../services/programService'
+import { completeReferralReward } from '../services/referralService'
 
 const PaymentSuccessPage = () => {
   const [searchParams] = useSearchParams()
@@ -40,6 +41,7 @@ const PaymentSuccessPage = () => {
           await startProgramV403(user.id)
           finalPlan = await getProgramPlan(user.id)
         }
+        await completeReferralReward(user.id)
         setStatus('success')
         setTimeout(() => navigate(finalPlan?.status === 'active' ? '/program' : '/', { replace: true }), 2000)
       } catch (err) {

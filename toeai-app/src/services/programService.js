@@ -109,9 +109,12 @@ export async function startProgramV403(userId) {
   const { error: insertErr } = await supabase.from('user_program_plans').upsert(plans, { onConflict: 'user_id,week' })
   if (insertErr) throw insertErr
 
+  const { data: userRow } = await supabase.from('users').select('bonus_days').eq('id', userId).maybeSingle()
+  const bonusDays = Math.min(60, Math.max(0, Number(userRow?.bonus_days) || 0))
+
   const startDate = new Date()
   const endDate = new Date(startDate)
-  endDate.setDate(endDate.getDate() + 56)
+  endDate.setDate(endDate.getDate() + 56 + bonusDays)
 
   const { error: userErr } = await supabase
     .from('users')

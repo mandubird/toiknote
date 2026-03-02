@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../contexts/AuthContext'
 import { getLatestDiagnostic, saveDiagnosticResult } from '../services/diagnosticService'
+import { rewardShareBonus } from '../services/referralService'
 
 const DiagnosticPage = () => {
   const { user } = useAuth()
@@ -11,6 +12,8 @@ const DiagnosticPage = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareRewarding, setShareRewarding] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -27,13 +30,32 @@ const DiagnosticPage = () => {
     if (!user) return
     setError(null)
     setSaving(true)
+    setShowShareModal(false)
     try {
       const result = await saveDiagnosticResult(user.id)
       setDiagnostic(result)
+      setShowShareModal(true)
     } catch (e) {
       setError(e?.message || '진단 저장에 실패했어요.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleShareReward = async () => {
+    if (!user) return
+    setShareRewarding(true)
+    setError(null)
+    try {
+      const shareUrl = `${window.location.origin}/landing`
+      await navigator.clipboard.writeText(shareUrl)
+      const res = await rewardShareBonus(user.id, 'link')
+      setShowShareModal(false)
+      alert(`공유 보상 완료! ${res.rewardDays}일 연장되었어요.${res.newEndDate ? ` 만료일: ${res.newEndDate.toLocaleDateString('ko-KR')}` : ' 결제 후 프로그램 시작 시 보너스가 적용돼요.'}`)
+    } catch (e) {
+      setError(e?.message || '보상 처리에 실패했어요.')
+    } finally {
+      setShareRewarding(false)
     }
   }
 
@@ -117,6 +139,34 @@ const DiagnosticPage = () => {
               8주 프로그램 보기
             </button>
           </div>
+
+          {showShareModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+                <h3 className="text-lg font-bold text-gray-900">🎁 결과 공유하고 +3일 연장 받기</h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  링크를 복사해 친구에게 공유하면<br />프로그램 사용기간을 3일 더 받을 수 있어요. (최대 3회)
+                </p>
+                <div className="mt-4 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={handleShareReward}
+                    disabled={shareRewarding}
+                    className="w-full py-3 rounded-xl bg-amber-400 font-semibold text-gray-900 disabled:opacity-50"
+                  >
+                    {shareRewarding ? '처리 중…' : '링크 복사하고 +3일 받기'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowShareModal(false)}
+                    className="w-full py-2 text-sm text-gray-500"
+                  >
+                    나중에 하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

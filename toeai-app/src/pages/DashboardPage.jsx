@@ -1,30 +1,45 @@
 /**
- * v4.1: 토답 900 점프 프로젝트 - 메인 대시보드
- * Day X/60 진행바, 현재/목표 점수, 이번 주 미션, 약점 TOP3, 점수 변화 그래프
+ * v4.1 + v4.20: 대시보드 (진행바, 미션, 약점, 그래프, 추천 섹션, 뱃지)
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '../contexts/AuthContext'
 import { getDashboardSummary } from '../services/programService'
+import { getReferralStats, getOrCreateReferralCode } from '../services/referralService'
+
+const BADGE_INFO = { none: null, challenger: { emoji: '🥉', name: 'Challenger' }, elite: { emoji: '🥈', name: 'Elite' }, '900': { emoji: '🥇', name: '900 달성' } }
 
 const DashboardPage = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [data, setData] = useState(null)
+  const [referralStats, setReferralStats] = useState(null)
+  const [referralCode, setReferralCode] = useState(null)
+  const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!user) {
       setData(null)
+      setReferralStats(null)
+      setReferralCode(null)
       setLoading(false)
       return
     }
-    getDashboardSummary(user.id)
-      .then(setData)
-      .catch(() => setData(null))
+    Promise.all([getDashboardSummary(user.id), getReferralStats(user.id)])
+      .then(([d, r]) => {
+        setData(d)
+        setReferralStats(r)
+      })
+      .catch(() => { setData(null); setReferralStats(null) })
       .finally(() => setLoading(false))
   }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id || !referralStats) return
+    getOrCreateReferralCode(user.id).then(setReferralCode)
+  }, [user?.id, referralStats])
 
   if (loading) {
     return (
@@ -69,6 +84,15 @@ const DashboardPage = () => {
         </div>
       ) : (
         <>
+          {referralStats?.badgeLevel && referralStats.badgeLevel !== 'none' && BADGE_INFO[referralStats.badgeLevel] && (
+            <div className="mb-4 flex justify-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800">
+                <span>{BADGE_INFO[referralStats.badgeLevel].emoji}</span>
+                <span>{BADGE_INFO[referralStats.badgeLevel].name}</span>
+              </span>
+            </div>
+          )}
+
           {/* 상단: Day X/60 진행바 + 점수 */}
           <div className="bg-primary-50 rounded-xl border border-primary-100 p-4 mb-4">
             <p className="text-sm font-medium text-primary-800 mb-1">
@@ -151,6 +175,33 @@ const DashboardPage = () => {
                   )}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* v4.20: 친구 초대 섹션 */}
+          {referralCode && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-800 mb-2">🎁 친구 초대하고 보너스 받기</h3>
+              <div className="mb-2 text-xs text-gray-600">
+                <p>👥 1명 초대 시 +7일 · 🎯 3명 누적 시 +21일 추가</p>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-gray-100 p-2">
+                <code className="flex-1 truncate text-sm font-mono">{referralCode}</code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}?ref=${referralCode}`)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="shrink-0 rounded bg-primary-600 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  {copied ? '복사됨!' : '복사'}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                초대한 친구: {referralStats?.referralCount ?? 0}명 · 받은 보너스: {referralStats?.bonusDays ?? 0}일
+              </p>
             </div>
           )}
         </>

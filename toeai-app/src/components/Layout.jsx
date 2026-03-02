@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { recordReferral } from '../services/referralService'
 import CameraButton from './CameraButton'
 import UploadProgressOverlay from './UploadProgressOverlay'
 import AnalysisConfirmModal from './AnalysisConfirmModal'
@@ -86,6 +87,14 @@ const Layout = () => {
   const handleLoginRequired = () => {
     navigate('/settings')
   }
+
+  const refCode = new URLSearchParams(location.search).get('ref')
+  useEffect(() => {
+    if (!user?.id || !refCode) return
+    const key = 'ref_done_' + user.id
+    if (sessionStorage.getItem(key)) return
+    recordReferral(refCode, user.id).then(() => sessionStorage.setItem(key, '1'))
+  }, [user?.id, refCode])
 
   const tabs = [
     { path: '/', label: '홈', icon: HomeIcon },
