@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { useAuth } from '../contexts/AuthContext'
 import { getLatestDiagnostic, saveDiagnosticResult } from '../services/diagnosticService'
 import { rewardShareBonus } from '../services/referralService'
+import CtaButton from '../components/landing/CtaButton'
 
 const DiagnosticPage = () => {
   const { user } = useAuth()
@@ -129,7 +130,14 @@ const DiagnosticPage = () => {
               </ResponsiveContainer>
             )}
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <div className="mt-4 rounded-xl border-2 border-amber-200 bg-amber-50 p-5">
+            <p className="text-center text-gray-800 mb-4">
+              지금 전략을 바꾸지 않으면,<br />
+              <strong>6개월 후도 같은 점수입니다.</strong>
+            </p>
+            <CtaButton type="START_PROGRAM" position="diagnosis_result" size="large" />
+          </div>
+          <div className="mt-4 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
             <p className="text-gray-700 mb-4">진단이 완료되었어요. 8주 프로그램은 결제 후 Week1이 시작돼요. 프로그램 화면에서 결제하고 시작할 수 있어요.</p>
             <button
               type="button"
