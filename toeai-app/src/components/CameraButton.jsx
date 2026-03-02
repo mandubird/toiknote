@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { resizeAndCompressImage } from '../utils/imageUtils'
 import UploadProgressOverlay from './UploadProgressOverlay'
+import ImageSourceBottomSheet from './ImageSourceBottomSheet'
 
 const BUCKET = 'images'
 
 const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
-  const inputRef = useRef(null)
+  const [bottomSheetOpen, setBottomSheetOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadMessage, setUploadMessage] = useState('이미지를 업로드하고 있어요...')
@@ -16,31 +17,23 @@ const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
       onLoginRequired?.()
       return
     }
-    inputRef.current?.click()
+    setBottomSheetOpen(true)
   }
 
-  const handleFileChange = async (e) => {
-    const file = e.target?.files?.[0]
-    e.target.value = ''
-    if (!file || !file.type.startsWith('image/')) return
-    if (!user) return
-
+  const processOneFile = async (file) => {
+    if (!user || !file?.type?.startsWith('image/')) return
     setUploading(true)
     setUploadProgress(0)
     setUploadMessage('이미지를 업로드하고 있어요...')
-
     try {
       const blob = await resizeAndCompressImage(file)
       setUploadMessage('업로드 중...')
       const path = `users/${user.id}/images/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-
       const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
         contentType: 'image/jpeg',
         upsert: false,
       })
-
       if (error) throw error
-
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path)
       const url = urlData?.publicUrl ?? ''
       setUploadMessage('업로드 완료!')
@@ -56,17 +49,22 @@ const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
     }
   }
 
+  const handleImagesSelected = async (files) => {
+    if (!files?.length || !user) return
+    setBottomSheetOpen(false)
+    for (const file of files) {
+      await processOneFile(file)
+    }
+  }
+
   return (
     <>
+      <ImageSourceBottomSheet
+        isOpen={bottomSheetOpen}
+        onClose={() => setBottomSheetOpen(false)}
+        onImagesSelected={handleImagesSelected}
+      />
       <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleFileChange}
-        />
         <button
           onClick={handleCameraClick}
           className="bg-primary-600 hover:bg-primary-700 text-white rounded-full p-5 shadow-lg transition-all duration-200 active:scale-95 flex items-center justify-center"
