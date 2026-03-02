@@ -114,13 +114,22 @@ const Layout = () => {
             <h1 className="text-xl font-bold text-primary-600">토답</h1>
             <p className="text-xs text-gray-500">사진 한 장으로 끝내는 오답 정리</p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/landing')}
-            className="text-sm font-medium text-primary-600 hover:underline"
-          >
-            900 점프
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/reviews')}
+              className="text-sm font-medium text-gray-600 hover:underline"
+            >
+              후기
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/landing')}
+              className="text-sm font-medium text-primary-600 hover:underline"
+            >
+              900 점프
+            </button>
+          </div>
         </div>
       </header>
 

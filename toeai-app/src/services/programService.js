@@ -343,6 +343,7 @@ export async function getDashboardSummary(userId) {
     days_total: DAYS_TOTAL,
     programStartDate: plan?.programStartDate ?? null,
     programEndDate: plan?.programEndDate ?? null,
+    programStatus: plan?.status ?? 'none',
     weakness_top3: weaknessTop3,
     score_history: scoreHistory,
   }
@@ -479,4 +480,41 @@ export async function advanceToNextWeek(userId) {
 
   if (nextWeek <= 8) await createWeekStartSnapshot(userId, nextWeek).catch(() => {})
   return { done: nextWeek >= 8, currentWeek: nextWeek }
+}
+
+/**
+ * v4.22: 프로그램 연장 (재결제 시 endDate += days, 만료 경고 플래그 초기화)
+ * @param {string} userId
+ * @param {number} days 기본 30일
+ * @returns {Promise<{ success: boolean, newEndDate: Date }>}
+ */
+export async function extendProgram(userId, days = 30) {
+  if (!userId) throw new Error('사용자를 찾을 수 없습니다.')
+
+  const { data: user, error: fetchErr } = await supabase
+    .from('users')
+    .select('program_end_date, program_status')
+    .eq('id', userId)
+    .single()
+
+  if (fetchErr || !user) throw new Error('사용자를 찾을 수 없습니다.')
+
+  const baseDate = user.program_status === 'expired'
+    ? new Date()
+    : new Date(user.program_end_date || Date.now())
+
+  const newEndDate = new Date(baseDate)
+  newEndDate.setDate(newEndDate.getDate() + days)
+
+  const { error: updateErr } = await supabase
+    .from('users')
+    .update({
+      program_end_date: newEndDate.toISOString(),
+      program_status: 'active',
+      expiry_warning_sent_at: null,
+    })
+    .eq('id', userId)
+
+  if (updateErr) throw new Error(updateErr.message)
+  return { success: true, newEndDate }
 }

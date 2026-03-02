@@ -7,6 +7,10 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { useAuth } from '../contexts/AuthContext'
 import { getDashboardSummary } from '../services/programService'
 import { getReferralStats, getOrCreateReferralCode } from '../services/referralService'
+import ReviewForm from '../components/ReviewForm'
+import ExpiryWarningBanner from '../components/ExpiryWarningBanner'
+import ExpiryModal from '../components/ExpiryModal'
+import ScoreGaugeCard from '../components/ScoreGaugeCard'
 
 const BADGE_INFO = { none: null, challenger: { emoji: '🥉', name: 'Challenger' }, elite: { emoji: '🥈', name: 'Elite' }, '900': { emoji: '🥇', name: '900 달성' } }
 
@@ -93,6 +97,9 @@ const DashboardPage = () => {
             </div>
           )}
 
+          <ExpiryModal programEndDate={data.programEndDate} programStatus={data.programStatus} />
+          <ExpiryWarningBanner programEndDate={data.programEndDate} programStatus={data.programStatus} />
+
           {/* 상단: Day X/60 진행바 + 점수 */}
           <div className="bg-primary-50 rounded-xl border border-primary-100 p-4 mb-4">
             <p className="text-sm font-medium text-primary-800 mb-1">
@@ -139,6 +146,11 @@ const DashboardPage = () => {
             </button>
           </div>
 
+          <ScoreGaugeCard
+            currentScore={data.predicted_score ?? 0}
+            targetScore={data.target_score ?? 900}
+          />
+
           {/* 약점 TOP 3 */}
           {data.weakness_top3?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
@@ -177,6 +189,11 @@ const DashboardPage = () => {
               )}
             </div>
           )}
+
+          {/* v4.21: 후기 작성 */}
+          <div className="mb-4">
+            <ReviewForm userId={user.id} />
+          </div>
 
           {/* v4.20: 친구 초대 섹션 */}
           {referralCode && (
