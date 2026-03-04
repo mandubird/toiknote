@@ -19,6 +19,10 @@ const SYSTEM_PROMPT = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니�
 문제 번호가 전혀 보이지 않을 때에만 텍스트 내용으로 파트를 추정해도 됩니다.
 
 이미지 안에 여러 문제가 있으면, 각 문제를 questions 배열의 원소로 모두 반환하세요.
+questions 배열 안의 **모든** 원소에 대해 question, answer, explanation, tags, difficulty를 빠짐없이 채워야 합니다.
+특히 Part 7에서 147번/148번처럼 여러 문제가 한 지문을 공유하더라도,
+147번과 148번 각각에 대해 고유한 question, answer, explanation, tags를 작성해야 하며
+첫 번째 문제에만 채우고 나머지 문제는 비워 두면 안 됩니다.
 같은 지문을 공유하는 문제들은 같은 passage_group_id로 묶으세요 (예: 147번/148번이면 "pg_147_148").
 
 응답 JSON 형식:
