@@ -71,6 +71,10 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
   }
 
   const handleSave = () => {
+    if (!answer.trim()) {
+      alert('정답을 입력해 주세요.')
+      return
+    }
     const rereadVal = rereadCount.trim() !== '' && /^\d+$/.test(rereadCount.trim()) ? parseInt(rereadCount.trim(), 10) : initialData?.rereadCount ?? null
     onSave({
       imageUrl,
@@ -151,7 +155,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                 <p className="text-gray-800 text-sm whitespace-pre-wrap">{question || '-'}</p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">정답</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">정답 (필수)</label>
                 <p className="text-gray-900 font-medium">{answer || '-'}</p>
               </div>
               <div>

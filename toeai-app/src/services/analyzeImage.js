@@ -33,7 +33,7 @@ questions 배열 안의 **모든** 원소에 대해 question, answer, explanatio
       "part": "Part 7",                 // "Part 1" ~ "Part 7" 중 하나
       "lcOrRc": "LC" 또는 "RC",         // Part 1~4는 LC, Part 5~7은 RC
       "question": "문제 텍스트...",
-      "answer": "정답 (예: A, B, C, D)",
+      "answer": "",                     // 항상 빈 문자열로 두세요 (정답은 사용자가 직접 입력)
       "explanation": "정답 해설",
       "tags": ["관계대명사", "현재완료"], // 핵심 태그, 3개 이하
       "difficulty": 1 | 2 | 3,          // 1=쉬움, 2=보통, 3=어려움
