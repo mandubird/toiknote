@@ -24,7 +24,7 @@ const PART_TAG_OPTIONS = {
   4: [{ label: '담화', options: ['공지', '안내방송', '광고', '회의', '전화메시지'] }, { label: '유형', options: ['주제', '세부정보', '추론'] }],
 }
 
-const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, saving }) => {
+const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, saving, multiTotal = 1, multiIndex = 0 }) => {
   const [step, setStep] = useState(1)
   const [part, setPart] = useState('')
   const [question, setQuestion] = useState('')
@@ -117,6 +117,11 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900">
             {step === 1 ? '1단계: 분석 결과 확인' : '2단계: 수정 후 저장'}
+            {multiTotal > 1 && (
+              <span className="ml-2 text-xs font-normal text-gray-500">
+                ({multiIndex + 1}/{multiTotal})
+              </span>
+            )}
           </h2>
           <button
             type="button"
@@ -251,13 +256,28 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
               )}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">파트</label>
-                <input
-                  type="text"
+                <select
                   value={part}
-                  onChange={(e) => setPart(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="Part 5"
-                />
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setPart(v)
+                    const numMatch = v.match(/(\d+)/)
+                    if (numMatch) {
+                      const n = parseInt(numMatch[1], 10)
+                      if (n >= 1 && n <= 7) setPartNumber(n)
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">파트 선택</option>
+                  <option value="Part 1">Part 1 (LC)</option>
+                  <option value="Part 2">Part 2 (LC)</option>
+                  <option value="Part 3">Part 3 (LC)</option>
+                  <option value="Part 4">Part 4 (LC)</option>
+                  <option value="Part 5">Part 5 (RC)</option>
+                  <option value="Part 6">Part 6 (RC)</option>
+                  <option value="Part 7">Part 7 (RC)</option>
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">문제</label>

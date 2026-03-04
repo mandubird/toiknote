@@ -19,6 +19,8 @@ const Layout = () => {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState(null)
   const [analysisResult, setAnalysisResult] = useState(null)
+  const [analysisQueue, setAnalysisQueue] = useState([])
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [confirmImageUrl, setConfirmImageUrl] = useState(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showPaywall, setShowPaywall] = useState(false)
@@ -32,8 +34,13 @@ const Layout = () => {
       setAnalysisError(null)
       setAnalyzing(true)
       try {
-        const data = await analyzeToeicImage(url)
-        setAnalysisResult(data)
+        const { questions } = await analyzeToeicImage(url)
+        if (!questions || !questions.length) {
+          throw new Error('이미지에서 토익 문제를 찾지 못했어요.')
+        }
+        setAnalysisQueue(questions)
+        setCurrentQuestionIndex(0)
+        setAnalysisResult(questions[0])
         setConfirmImageUrl(url)
         setShowConfirmModal(true)
       } catch (err) {
@@ -63,12 +70,25 @@ const Layout = () => {
 
         const result = await saveWrongNoteWithStats(user.id, data)
         if (result.success) {
-          setShowConfirmModal(false)
-          setAnalysisResult(null)
-          setConfirmImageUrl(null)
-          setAnalysisError(null)
-          refreshList()
-          alert('오답이 저장되었어요.')
+          const nextIndex = currentQuestionIndex + 1
+          const hasNext = nextIndex < analysisQueue.length
+
+          if (hasNext) {
+            setCurrentQuestionIndex(nextIndex)
+            setAnalysisResult(analysisQueue[nextIndex])
+            setAnalysisError(null)
+            refreshList()
+            alert('오답이 저장되었어요. 다음 문제도 이어서 저장할게요.')
+          } else {
+            setShowConfirmModal(false)
+            setAnalysisResult(null)
+            setConfirmImageUrl(null)
+            setAnalysisError(null)
+            setAnalysisQueue([])
+            setCurrentQuestionIndex(0)
+            refreshList()
+            alert('오답이 저장되었어요.')
+          }
         } else {
           alert(
             result.error +
@@ -81,7 +101,7 @@ const Layout = () => {
         setSaving(false)
       }
     },
-    [user, refreshList]
+    [user, refreshList, analysisQueue, currentQuestionIndex, freeLimit]
   )
 
   const handleLoginRequired = () => {
@@ -160,8 +180,12 @@ const Layout = () => {
           setShowConfirmModal(false)
           setAnalysisResult(null)
           setConfirmImageUrl(null)
+          setAnalysisQueue([])
+          setCurrentQuestionIndex(0)
         }}
         initialData={analysisResult}
+        multiTotal={analysisQueue.length || 1}
+        multiIndex={currentQuestionIndex}
         imageUrl={confirmImageUrl}
         onSave={handleConfirmSave}
         saving={saving}
