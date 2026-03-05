@@ -3,6 +3,7 @@ import { fetchTagStats, calculateEstimatedScore } from './fetchTagStats'
 import { getUserProfile } from './userProfile'
 import { performCompleteDiagnosis, getScoreRange } from './diagnosisService'
 import { createWeekStartSnapshot, createWeekEndSnapshot, getSnapshotsForWeek } from './snapshotService'
+import { getTop10WeakTags } from './tagStatsService.js'
 
 /** 점수 구간 라벨 (계획서: 600 이하는 제외, 700-800 / 800-900 템플릿만 사용) */
 const BAND_700_800 = '700-800'
@@ -341,7 +342,7 @@ export async function getDashboardSummary(userId) {
     getUserProfile(userId),
     supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
     fetchTagStats(userId),
-    import('./tagStatsService').then((m) => m.getTop10WeakTags(userId)).catch(() => []),
+    getTop10WeakTags(userId).catch(() => []),
   ])
 
   const currentPlan = plan?.plans?.find((p) => p.week === plan.currentWeek)
@@ -566,8 +567,7 @@ export async function extendProgram(userId, days = 30) {
  * @returns {Promise<Array<{ week: number, focusTagIds: string[], focusTagCodes: string[], dailyTarget: number, difficultyMix: string }>>}
  */
 export async function buildWeeklyTagPlans(userId) {
-  const { getTop10WeakTags } = await import('./tagStatsService')
-  const weakTags = await getTop10WeakTags(userId)
+  const weakTags = await getTop10WeakTags(userId).catch(() => [])
 
   if (weakTags.length === 0) {
     return [1, 2, 3, 4, 5, 6, 7, 8].map((week) => ({
