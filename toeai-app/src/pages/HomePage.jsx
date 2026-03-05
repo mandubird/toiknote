@@ -41,6 +41,14 @@ const HomePage = () => {
       .finally(() => setLoading(false))
   }, [user, listVersion])
 
+  // 파트별 오답 개수
+  const partCounts = questions.reduce((acc, q) => {
+    if (q.part) {
+      acc[q.part] = (acc[q.part] || 0) + 1
+    }
+    return acc
+  }, {})
+
   // 태그별 등장 횟수 (자주 틀리는 순)
   const tagCounts = questions.reduce((acc, q) => {
     ;(q.tags || []).forEach((tag) => {
@@ -137,20 +145,24 @@ const HomePage = () => {
             >
               전체
             </button>
-            {PARTS.map((part) => (
-              <button
-                key={part}
-                type="button"
-                onClick={() => setSelectedPart(part)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                  selectedPart === part
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {part}
-              </button>
-            ))}
+            {PARTS.map((part) => {
+              const count = partCounts[part] || 0
+              return (
+                <button
+                  key={part}
+                  type="button"
+                  onClick={() => setSelectedPart(part)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                    selectedPart === part
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {part}
+                  {count > 0 ? ` (${count})` : ''}
+                </button>
+              )
+            })}
           </div>
 
           {sortedTags.length > 0 && (

@@ -8,6 +8,17 @@ import { createWeekStartSnapshot, createWeekEndSnapshot, getSnapshotsForWeek } f
 const BAND_700_800 = '700-800'
 const BAND_800_900 = '800-900'
 
+// v4.24: Supabase 프로젝트에 아직 user_program_plans 테이블이 없을 때
+// 8주 프로그램 기능이 전체가 깨지는 것을 방지하기 위한 헬퍼
+function isMissingUserProgramPlansTableError(error) {
+  if (!error) return false
+  const msg = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+  return (
+    msg.includes('user_program_plans') &&
+    (msg.includes('could not find the table') || msg.includes('does not exist'))
+  )
+}
+
 /**
  * 추정 점수로 8주 프로그램 대상 구간 반환
  * @param {number} estimatedScore
@@ -60,7 +71,13 @@ export async function startProgram(userId) {
   const { error: insertErr } = await supabase.from('user_program_plans').upsert(plans, {
     onConflict: 'user_id,week',
   })
-  if (insertErr) throw insertErr
+  if (insertErr) {
+    if (isMissingUserProgramPlansTableError(insertErr)) {
+      console.warn('[startProgram] user_program_plans 테이블이 없어 계획 저장을 건너뜁니다.')
+    } else {
+      throw insertErr
+    }
+  }
 
   const { error: userErr } = await supabase
     .from('users')
@@ -106,8 +123,16 @@ export async function startProgramV403(userId) {
     strategy_text: p.strategy_text || '',
   }))
 
-  const { error: insertErr } = await supabase.from('user_program_plans').upsert(plans, { onConflict: 'user_id,week' })
-  if (insertErr) throw insertErr
+  const { error: insertErr } = await supabase.from('user_program_plans').upsert(plans, {
+    onConflict: 'user_id,week',
+  })
+  if (insertErr) {
+    if (isMissingUserProgramPlansTableError(insertErr)) {
+      console.warn('[startProgramV403] user_program_plans 테이블이 없어 계획 저장을 건너뜁니다.')
+    } else {
+      throw insertErr
+    }
+  }
 
   const { data: userRow } = await supabase.from('users').select('bonus_days').eq('id', userId).maybeSingle()
   const bonusDays = Math.min(60, Math.max(0, Number(userRow?.bonus_days) || 0))
@@ -202,8 +227,16 @@ export async function generatePersonalizedProgram(userId) {
     strategy_text: p.strategy_text || '',
   }))
 
-  const { error } = await supabase.from('user_program_plans').upsert(plans, { onConflict: 'user_id,week' })
-  if (error) throw error
+  const { error } = await supabase.from('user_program_plans').upsert(plans, {
+    onConflict: 'user_id,week',
+  })
+  if (error) {
+    if (isMissingUserProgramPlansTableError(error)) {
+      console.warn('[generatePersonalizedProgram] user_program_plans 테이블이 없어 계획 저장을 건너뜁니다.')
+    } else {
+      throw error
+    }
+  }
   return plans
 }
 
@@ -302,12 +335,13 @@ export async function getDashboardSummary(userId) {
   }
   if (!userId) return empty
 
-  const [plan, reports, profile, { data: scorePred }, tagStats] = await Promise.all([
+  const [plan, reports, profile, { data: scorePred }, tagStats, top10Weak] = await Promise.all([
     getProgramPlan(userId),
     getWeeklyReports(userId),
     getUserProfile(userId),
     supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
     fetchTagStats(userId),
+    import('./tagStatsService').then((m) => m.getTop10WeakTags(userId)).catch(() => []),
   ])
 
   const currentPlan = plan?.plans?.find((p) => p.week === plan.currentWeek)
@@ -321,10 +355,17 @@ export async function getDashboardSummary(userId) {
   }
 
   const totalWrong = tagStats?.totalWrong || 1
-  const weaknessTop3 = Object.entries(tagStats?.tagCounts || {})
-    .map(([tag, count]) => ({ tag, count, rate: Math.round((Number(count) / totalWrong) * 1000) / 10 }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3)
+  const weaknessTop3 =
+    Array.isArray(top10Weak) && top10Weak.length > 0
+      ? top10Weak.slice(0, 3).map((t) => ({
+          tag: t.tagName,
+          count: t.attemptCount,
+          rate: Math.round((1 - t.accuracyRate) * 1000) / 10,
+        }))
+      : Object.entries(tagStats?.tagCounts || {})
+          .map(([tag, count]) => ({ tag, count, rate: Math.round((Number(count) / totalWrong) * 1000) / 10 }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3)
 
   const scoreHistory = (reports || []).map((r) => ({
     week: r.week,
@@ -517,4 +558,77 @@ export async function extendProgram(userId, days = 30) {
 
   if (updateErr) throw new Error(updateErr.message)
   return { success: true, newEndDate }
+}
+
+/**
+ * v4.24: 약점 Top10 기반 주차별 태그 배정 (8주)
+ * @param {string} userId
+ * @returns {Promise<Array<{ week: number, focusTagIds: string[], focusTagCodes: string[], dailyTarget: number, difficultyMix: string }>>}
+ */
+export async function buildWeeklyTagPlans(userId) {
+  const { getTop10WeakTags } = await import('./tagStatsService')
+  const weakTags = await getTop10WeakTags(userId)
+
+  if (weakTags.length === 0) {
+    return [1, 2, 3, 4, 5, 6, 7, 8].map((week) => ({
+      week,
+      focusTagIds: [],
+      focusTagCodes: [],
+      dailyTarget: week <= 2 ? 25 : week <= 6 ? 20 : 30,
+      difficultyMix: '2:1:1',
+    }))
+  }
+
+  const grammarTags = weakTags.filter((t) => ['GRAMMAR', 'VOCAB', 'P5', 'P6'].includes(t.category)).slice(0, 3)
+  const p7Tags = weakTags.filter((t) => t.category === 'P7').slice(0, 3)
+  const lcTags = weakTags.filter((t) => t.category === 'LC').slice(0, 3)
+  const metaTags = weakTags.filter((t) => t.category === 'META').slice(0, 2)
+
+  const { data: trapTags } = await supabase
+    .from('tag_master')
+    .select('id, tag_code')
+    .gte('tag_code', 'P7-091')
+    .lte('tag_code', 'P7-097')
+    .limit(2)
+
+  const trapIds = trapTags?.map((t) => t.id) ?? []
+  const trapCodes = trapTags?.map((t) => t.tag_code) ?? []
+
+  return [
+    { week: 1, focusTagIds: grammarTags.map((t) => t.tagId), focusTagCodes: grammarTags.map((t) => t.tagCode), dailyTarget: 25, difficultyMix: '2:1:1' },
+    { week: 2, focusTagIds: grammarTags.map((t) => t.tagId), focusTagCodes: grammarTags.map((t) => t.tagCode), dailyTarget: 25, difficultyMix: '1:2:1' },
+    { week: 3, focusTagIds: [...p7Tags.map((t) => t.tagId), ...trapIds], focusTagCodes: [...p7Tags.map((t) => t.tagCode), ...trapCodes], dailyTarget: 20, difficultyMix: '1:2:1' },
+    { week: 4, focusTagIds: [...p7Tags.map((t) => t.tagId), ...trapIds], focusTagCodes: [...p7Tags.map((t) => t.tagCode), ...trapCodes], dailyTarget: 20, difficultyMix: '1:1:2' },
+    { week: 5, focusTagIds: lcTags.map((t) => t.tagId), focusTagCodes: lcTags.map((t) => t.tagCode), dailyTarget: 25, difficultyMix: '2:1:1' },
+    { week: 6, focusTagIds: lcTags.map((t) => t.tagId), focusTagCodes: lcTags.map((t) => t.tagCode), dailyTarget: 25, difficultyMix: '1:2:1' },
+    { week: 7, focusTagIds: [...weakTags.slice(0, 3).map((t) => t.tagId), ...metaTags.map((t) => t.tagId)], focusTagCodes: [...weakTags.slice(0, 3).map((t) => t.tagCode), ...metaTags.map((t) => t.tagCode)], dailyTarget: 30, difficultyMix: '1:1:2' },
+    { week: 8, focusTagIds: [...weakTags.slice(0, 5).map((t) => t.tagId), ...metaTags.map((t) => t.tagId)], focusTagCodes: [...weakTags.slice(0, 5).map((t) => t.tagCode), ...metaTags.map((t) => t.tagCode)], dailyTarget: 30, difficultyMix: '0:1:3' },
+  ]
+}
+
+/**
+ * v4.24: 주차별 태그 플랜을 user_program_plans에 반영 (focus_tag_ids만 갱신, 기존 focus_parts/strategy_text 유지)
+ * @param {string} userId
+ * @param {Array<{ week: number, focusTagIds: string[], focusTagCodes: string[], dailyTarget: number }>} plans
+ */
+export async function saveWeeklyTagPlans(userId, plans) {
+  if (!plans?.length) return
+  for (const p of plans) {
+    const { error } = await supabase
+      .from('user_program_plans')
+      .update({
+        focus_tag_ids: p.focusTagIds ?? [],
+        focus_tags: p.focusTagCodes ?? [],
+        daily_task_count: p.dailyTarget ?? 20,
+      })
+      .eq('user_id', userId)
+      .eq('week', p.week)
+    if (error) {
+      if (isMissingUserProgramPlansTableError(error)) {
+        console.warn('[saveWeeklyTagPlans] user_program_plans 테이블이 없어 업데이트를 건너뜁니다.')
+        return
+      }
+      throw error
+    }
+  }
 }

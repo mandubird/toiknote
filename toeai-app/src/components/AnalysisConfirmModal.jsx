@@ -38,6 +38,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
   const [timeoutFlag, setTimeoutFlag] = useState(false)
   const [solvingTime, setSolvingTime] = useState('')
   const [rereadCount, setRereadCount] = useState('')
+  const [selectedOption, setSelectedOption] = useState(null)
 
   useEffect(() => {
     if (open && initialData) {
@@ -54,6 +55,13 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       setTimeoutFlag(false)
       setSolvingTime('')
       setRereadCount(initialData?.rereadCount != null ? String(initialData.rereadCount) : '')
+      // 정답이 "B. which" 형태면 선택된 보기로 반영
+      if (initialData.options && typeof initialData.options === 'object' && initialData.answer) {
+        const m = String(initialData.answer).trim().match(/^([A-Da-d])/)
+        setSelectedOption(m ? m[1].toUpperCase() : null)
+      } else {
+        setSelectedOption(null)
+      }
     }
   }, [open, initialData])
 
@@ -75,14 +83,31 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       alert('정답을 입력해 주세요.')
       return
     }
-    const rereadVal = rereadCount.trim() !== '' && /^\d+$/.test(rereadCount.trim()) ? parseInt(rereadCount.trim(), 10) : initialData?.rereadCount ?? null
+    const rereadVal =
+      rereadCount.trim() !== '' && /^\d+$/.test(rereadCount.trim())
+        ? parseInt(rereadCount.trim(), 10)
+        : initialData?.rereadCount ?? null
+
+    let finalAnswer = answer.trim()
+    if (
+      /^[A-Da-d]$/.test(finalAnswer) &&
+      initialData?.options &&
+      typeof initialData.options === 'object'
+    ) {
+      const letter = finalAnswer.toUpperCase()
+      const optText = initialData.options[letter]
+      if (optText) {
+        finalAnswer = `${letter}. ${optText}`
+      }
+    }
+
     onSave({
       imageUrl,
       part,
       partNumber,
       lcOrRc,
       question,
-      answer,
+      answer: finalAnswer,
       explanation,
       tags: tagsArray,
       difficulty,
@@ -109,6 +134,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       part6BlankType: initialData?.part6BlankType ?? null,
       part6ContextFailReason: initialData?.part6ContextFailReason ?? null,
       rereadCount: rereadVal,
+      options: initialData?.options ?? null,
     })
   }
 
@@ -165,13 +191,42 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">태그</label>
                 <div className="flex flex-wrap gap-1">
-                  {tagsArray.length ? tagsArray.map((t, i) => (
-                    <span key={i} className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded">
-                      #{t}
-                    </span>
-                  )) : '-'}
+                  {tagsArray.length
+                    ? tagsArray.map((t, i) => (
+                        <span
+                          key={i}
+                          className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded"
+                        >
+                          #{t}
+                        </span>
+                      ))
+                    : '-'}
                 </div>
               </div>
+              {initialData?.options && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">보기</label>
+                  <div className="text-sm text-gray-800 space-y-0.5">
+                    {['A', 'B', 'C', 'D'].map((key) => {
+                      const text = initialData.options?.[key]
+                      if (!text) return null
+                      const isCorrect =
+                        answer &&
+                        (answer.trim().toUpperCase() === key ||
+                          answer.trim().toUpperCase().startsWith(key + '.'))
+                      return (
+                        <p
+                          key={key}
+                          className={isCorrect ? 'font-semibold text-primary-700' : ''}
+                        >
+                          {key}. {text}
+                          {isCorrect ? ' ← 정답 후보' : ''}
+                        </p>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               {/* STEP 3 + v4.01: 세부 분류 (전파트) */}
               {(initialData?.grammarCategory || initialData?.passageType || initialData?.questionPattern || initialData?.part1ImageTrapType || initialData?.part3QuestionType || initialData?.part4LectureType || initialData?.part6BlankType || initialData?.rereadCount != null) && (
                 <div className="pt-2 border-t border-gray-100">
@@ -293,16 +348,48 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                   placeholder="문제 텍스트"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">정답</label>
-                <input
-                  type="text"
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="A"
-                />
-              </div>
+              {initialData?.options && Object.keys(initialData.options || {}).length > 0 ? (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    정답 (보기에서 선택)
+                  </label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {['A', 'B', 'C', 'D'].map((key) => {
+                      const text = initialData.options?.[key]
+                      if (!text) return null
+                      const isSelected = selectedOption === key
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedOption(key)
+                            setAnswer(`${key}. ${text}`)
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                            isSelected
+                              ? 'bg-primary-600 text-white border-primary-600'
+                              : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                          }`}
+                        >
+                          {key}. {text}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">정답</label>
+                  <input
+                    type="text"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    placeholder="A"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">해설</label>
                 <textarea

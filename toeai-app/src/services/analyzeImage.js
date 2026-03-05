@@ -34,6 +34,12 @@ questions 배열 안의 **모든** 원소에 대해 question, answer, explanatio
       "lcOrRc": "LC" 또는 "RC",         // Part 1~4는 LC, Part 5~7은 RC
       "question": "문제 텍스트...",
       "answer": "",                     // 항상 빈 문자열로 두세요 (정답은 사용자가 직접 입력)
+      "options": {                      // 보기 (있다면 채우고, 없으면 빈 객체)
+        "A": "it",
+        "B": "which",
+        "C": "anyone",
+        "D": "where"
+      },
       "explanation": "정답 해설",
       "tags": ["관계대명사", "현재완료"], // 핵심 태그, 3개 이하
       "difficulty": 1 | 2 | 3,          // 1=쉬움, 2=보통, 3=어려움
@@ -176,6 +182,10 @@ export async function analyzeToeicImage(imageUrl) {
       lcOrRc,
       questionNumber,
       passageGroupId: safeStr(q.passage_group_id || q.passageGroupId),
+      options:
+        q.options && typeof q.options === 'object'
+          ? q.options
+          : null,
       question: String(q.question ?? '').trim(),
       answer: String(q.answer ?? '').trim(),
       explanation: String(q.explanation ?? '').trim(),
