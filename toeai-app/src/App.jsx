@@ -10,6 +10,7 @@ import ProgramPage from './pages/ProgramPage'
 import DiagnosticPage from './pages/DiagnosticPage'
 import DashboardPage from './pages/DashboardPage'
 import WeekPage from './pages/WeekPage'
+import WrongNoteDetailPage from './pages/WrongNoteDetailPage'
 import ReportPage from './pages/ReportPage'
 import UpgradePage from './pages/UpgradePage'
 import PaymentSuccessPage from './pages/PaymentSuccessPage'
@@ -41,6 +42,7 @@ function App() {
           <Route path="/payment/fail" element={<PaymentFailPage />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
+            <Route path="note/:id" element={<WrongNoteDetailPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="reviews" element={<ReviewsPage />} />
             <Route path="week/:weekNumber" element={<WeekPage />} />

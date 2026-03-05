@@ -16,6 +16,7 @@ const HomePage = () => {
   const [dashboard, setDashboard] = useState(null)
   const [selectedPart, setSelectedPart] = useState(null)
   const [selectedTag, setSelectedTag] = useState(null)
+  const [showAllTags, setShowAllTags] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -180,7 +181,7 @@ const HomePage = () => {
                 >
                   전체
                 </button>
-                {sortedTags.map((tag) => (
+                {(showAllTags ? sortedTags : sortedTags.slice(0, 5)).map((tag) => (
                   <button
                     key={tag}
                     type="button"
@@ -194,6 +195,15 @@ const HomePage = () => {
                     #{tag} {tagCounts[tag] > 1 ? `(${tagCounts[tag]})` : ''}
                   </button>
                 ))}
+                {sortedTags.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTags((v) => !v)}
+                    className="px-2 py-1 rounded-full text-xs font-medium bg-white border border-amber-200 text-amber-700 hover:bg-amber-50"
+                  >
+                    {showAllTags ? '접기' : `더보기 (+${sortedTags.length - 5})`}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -207,7 +217,11 @@ const HomePage = () => {
       ) : (
         <div className="space-y-3">
           {filtered.map((q) => (
-            <QuestionCard key={q.id} question={{ ...q, date: formatDate(q.createdAt) }} />
+            <QuestionCard
+              key={q.id}
+              question={{ ...q, date: formatDate(q.createdAt) }}
+              onClick={() => navigate(`/note/${q.id}`, { state: { question: q } })}
+            />
           ))}
         </div>
       )}
@@ -233,8 +247,20 @@ const EmptyState = ({ hasAny }) => (
   </div>
 )
 
-const QuestionCard = ({ question }) => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+const QuestionCard = ({ question, onClick }) => (
+  <div
+    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:bg-gray-50 active:scale-[0.99] transition"
+    onClick={onClick}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => {
+      if (!onClick) return
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        onClick()
+      }
+    }}
+  >
     <div className="flex items-start justify-between mb-2">
       <span className="inline-block px-2 py-1 text-xs font-semibold text-primary-700 bg-primary-100 rounded">
         {question.part}

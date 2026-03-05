@@ -18,6 +18,9 @@ const SYSTEM_PROMPT = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니�
 
 문제 번호가 전혀 보이지 않을 때에만 텍스트 내용으로 파트를 추정해도 됩니다.
 
+모든 태그와 세부 분류 필드는 반드시 한국어(한글)로만 작성하세요.
+영어 단어나 로마자 표기는 사용하지 말고, "관계대명사", "현재완료", "부정사"처럼 한국어 표현으로 통일하세요.
+
 이미지 안에 여러 문제가 있으면, 각 문제를 questions 배열의 원소로 모두 반환하세요.
 questions 배열 안의 **모든** 원소에 대해 question, answer, explanation, tags, difficulty를 빠짐없이 채워야 합니다.
 특히 Part 7에서 147번/148번처럼 여러 문제가 한 지문을 공유하더라도,
@@ -41,7 +44,7 @@ questions 배열 안의 **모든** 원소에 대해 question, answer, explanatio
         "D": "where"
       },
       "explanation": "정답 해설",
-      "tags": ["관계대명사", "현재완료"], // 핵심 태그, 3개 이하
+      "tags": ["관계대명사", "현재완료"], // 핵심 태그, 3개 이하 (반드시 한국어)
       "difficulty": 1 | 2 | 3,          // 1=쉬움, 2=보통, 3=어려움
 
       // 파트별 세부 분류 (해당 파트일 때만 채우고, 아니면 null 또는 생략)
@@ -84,7 +87,10 @@ const USER_PROMPT = `이 토익 문제 이미지를 분석해서 위에서 정�
 - 문제가 여러 개면 questions 배열에 모두 넣고, 같은 지문을 공유하면 passage_group_id로 묶어 주세요.
 - 각 문제에 대해 part, lcOrRc, question, answer, explanation, tags, difficulty를 채우고,
   가능한 경우 파트별 세부 필드(문법/질문유형/재독횟수 등)도 채워 주세요.
-해당 안 되는 필드는 null 또는 생략해도 됩니다.`
+해당 안 되는 필드는 null 또는 생략해도 됩니다.
+
+특히 tags, grammarCategory, grammarSubType, passageType, questionType, questionPattern, answerType 등
+모든 분류 관련 텍스트는 반드시 한국어(한글)로만 작성하세요. 영어 태그나 혼합 표기는 사용하지 마세요.`
 
 /**
  * 이미지 URL을 GPT-4o mini로 분석해 오답 정보 + 세부 분류 JSON 반환
