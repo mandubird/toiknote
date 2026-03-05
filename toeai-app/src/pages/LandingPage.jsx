@@ -60,9 +60,9 @@ const LandingPage = () => {
           무료 점수 진단 받기 →
         </button>
         <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm opacity-90">
-          <span>✓ 850→910 실제 사례 37명</span>
-          <span>✓ 평균 +58점 상승</span>
-          <span>✓ 60일 환불 보장</span>
+          <span>✓ 첫 1기 5명과 함께 60일 실험 시작</span>
+          <span>✓ 실제 점수 데이터 공개 예정</span>
+          <span>✓ 피드백 기반 지속 개선</span>
         </div>
       </section>
 
