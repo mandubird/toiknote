@@ -4,6 +4,7 @@ import { getUserProfile } from './userProfile'
 import { performCompleteDiagnosis, getScoreRange } from './diagnosisService'
 import { createWeekStartSnapshot, createWeekEndSnapshot, getSnapshotsForWeek } from './snapshotService'
 import { getTop10WeakTags } from './tagStatsService.js'
+import { generateAICoachComment } from './aiCoachService.js'
 
 /** 점수 구간 라벨 (계획서: 600 이하는 제외, 700-800 / 800-900 템플릿만 사용) */
 const BAND_700_800 = '700-800'
@@ -155,6 +156,12 @@ export async function startProgramV403(userId) {
   if (userErr) throw userErr
 
   await createWeekStartSnapshot(userId, 1).catch(() => {})
+
+  // 약점 태그 기반 주차별 태그 배정 (v4.24)
+  buildWeeklyTagPlans(userId)
+    .then((tagPlans) => saveWeeklyTagPlans(userId, tagPlans))
+    .catch(() => {})
+
   return { currentWeek: 1 }
 }
 
@@ -468,14 +475,22 @@ export async function generateWeeklyReport(userId, week) {
       const e = Number((endSnap.tag_wrong_counts && endSnap.tag_wrong_counts[tag]) || 0)
       tagImprovement[tag] = { start: s, end: e, reduction: s - e }
     })
-    const accChangeText = accuracyStart != null && accuracyEnd != null
-      ? (accuracyEnd - accuracyStart >= 0 ? `+${Math.round((accuracyEnd - accuracyStart) * 10) / 10}%` : `${Math.round((accuracyEnd - accuracyStart) * 10) / 10}%`)
-      : '-'
-    const line1 = `현재 정확도: ${accuracyEnd != null ? Math.round(accuracyEnd * 10) / 10 : '-'}%`
-    const line2 = `전주 대비 변화: ${accChangeText}`
-    const line3 = nextPlan?.strategy_text ? `이번 주 집중: ${nextPlan.strategy_text}` : '이번 주 집중 포인트를 유지해 주세요.'
-    const line4 = nextWeekStrategy ? `다음 주 전략: ${nextWeekStrategy}` : '다음 주에도 꾸준히 진행해 주세요.'
-    const aiFeedback = [line1, line2, line3, line4].join('\n')
+    const accuracyChangeVal = accuracyStart != null && accuracyEnd != null
+      ? Math.round((accuracyEnd - accuracyStart) * 10) / 10
+      : 0
+    const part7ChangeVal = part7Change ?? 0
+    const estimatedScoreEndVal = endSnap.estimated_score != null ? Number(endSnap.estimated_score) : estimatedScoreEnd
+    const estimatedScoreStartVal = startSnap.estimated_score != null ? Number(startSnap.estimated_score) : estimatedScoreEndVal
+    const scoreChangeVal = estimatedScoreEndVal - estimatedScoreStartVal
+
+    const aiFeedback = await generateAICoachComment({
+      userId,
+      weekNumber: week,
+      accuracyChange: accuracyChangeVal,
+      part7TimeChange: part7ChangeVal,
+      predictedScore: estimatedScoreEndVal,
+      predictedScoreChange: scoreChangeVal,
+    }).catch(() => null)
     payload = {
       ...payload,
       estimated_score_start: startSnap.estimated_score != null ? Number(startSnap.estimated_score) : null,
@@ -611,15 +626,32 @@ export async function buildWeeklyTagPlans(userId) {
  * @param {string} userId
  * @param {Array<{ week: number, focusTagIds: string[], focusTagCodes: string[], dailyTarget: number }>} plans
  */
+const WEEK_PHASE_LABELS = {
+  1: 'RC 집중 1주차',
+  2: 'RC 집중 2주차',
+  3: 'Part7 집중 1주차',
+  4: 'Part7 집중 2주차',
+  5: 'LC 집중 1주차',
+  6: 'LC 집중 2주차',
+  7: '실전 시뮬레이션',
+  8: '최종 약점 제거',
+}
+
 export async function saveWeeklyTagPlans(userId, plans) {
   if (!plans?.length) return
   for (const p of plans) {
+    const tagLabel = p.focusTagCodes?.length
+      ? `집중 태그: ${p.focusTagCodes.slice(0, 3).join(', ')}`
+      : '전체 균형'
+    const strategyText = `${WEEK_PHASE_LABELS[p.week] ?? `${p.week}주차`} · ${tagLabel}`
+
     const { error } = await supabase
       .from('user_program_plans')
       .update({
         focus_tag_ids: p.focusTagIds ?? [],
         focus_tags: p.focusTagCodes ?? [],
         daily_task_count: p.dailyTarget ?? 20,
+        strategy_text: strategyText,
       })
       .eq('user_id', userId)
       .eq('week', p.week)
