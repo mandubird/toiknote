@@ -2,9 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { setSubscriptionPaid } from '../services/subscription'
-import { isDiagnosticCompleted } from '../services/diagnosticService'
-import { getProgramPlan } from '../services/programService'
-import { startProgramV403 } from '../services/programService'
 import { completeReferralReward } from '../services/referralService'
 
 const PaymentSuccessPage = () => {
@@ -31,19 +28,10 @@ const PaymentSuccessPage = () => {
       try {
         // 프로덕션에서는 서버에서 결제 승인 API 호출 후 여기서는 구독만 반영
         await setSubscriptionPaid(user.id)
-        // v4.04: 진단 완료 + 프로그램 미시작 상태면 결제 후 8주 프로그램 자동 시작
-        const [diagnosticDone, plan] = await Promise.all([
-          isDiagnosticCompleted(user.id),
-          getProgramPlan(user.id),
-        ])
-        let finalPlan = plan
-        if (diagnosticDone && plan?.status === 'none') {
-          await startProgramV403(user.id)
-          finalPlan = await getProgramPlan(user.id)
-        }
         await completeReferralReward(user.id)
         setStatus('success')
-        setTimeout(() => navigate(finalPlan?.status === 'active' ? '/program' : '/', { replace: true }), 2000)
+        // v4.26: 자동 시작 제거 → 시험일 입력 후 프로그램 시작하도록 ProgramPage로 이동
+        setTimeout(() => navigate('/program', { replace: true }), 2000)
       } catch (err) {
         console.error(err)
         setStatus('error')

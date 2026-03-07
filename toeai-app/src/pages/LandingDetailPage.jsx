@@ -160,7 +160,7 @@ export default function LandingDetailPage() {
       {/* Section 6: 가격 (pricing_plans 조회) */}
       <section className="px-4 py-16" id="pricing">
         <div className="mx-auto max-w-xl">
-          <h2 className="text-center text-2xl font-bold text-gray-900">60일 전략 시작하기</h2>
+          <h2 className="text-center text-2xl font-bold text-gray-900">100일 프로젝트 시작하기</h2>
           <div className="mt-8 rounded-xl border-2 border-primary-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-gray-500">정가 <s>{originalPrice.toLocaleString()}원</s></p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -174,8 +174,8 @@ export default function LandingDetailPage() {
             </div>
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
               <li>✓ AI 약점 분석 + 점수 예측</li>
-              <li>✓ 8주 맞춤 전략 리포트</li>
-              <li>✓ 60일 집중 관리 시스템</li>
+              <li>✓ 주간 맞춤 전략 리포트</li>
+              <li>✓ 100일 집중 관리 시스템</li>
             </ul>
             <div className="mt-6">
               <CtaButton type="START_PROGRAM" position="pricing" size="large" />
@@ -188,7 +188,7 @@ export default function LandingDetailPage() {
       {/* Section 7: 하단 CTA */}
       <section className="border-t border-gray-100 bg-gray-50 px-4 py-16">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-xl font-bold text-gray-900">지금 시작하면 60일 후 달라집니다.</h2>
+          <h2 className="text-xl font-bold text-gray-900">지금 시작하면 100일 후 달라집니다.</h2>
           <div className="mt-6">
             <CtaButton type="FREE_DIAGNOSIS" position="footer" />
           </div>

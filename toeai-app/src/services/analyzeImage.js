@@ -74,7 +74,11 @@ questions 배열 안의 **모든** 원소에 대해 question, answer, explanatio
       "questionType": "...",
       "rereadCount": 0 이상 정수 또는 null,
 
-      "passage_group_id": "pg_147_148"  // 같은 지문 세트인 문제끼리 동일한 ID 사용
+      "passage_group_id": "pg_147_148",  // 같은 지문 세트인 문제끼리 동일한 ID 사용
+
+      // 어휘 문제일 때만 채움 (tags에 "어휘"가 포함된 경우)
+      // 아닌 경우 null
+      "keyVocabulary": ["단어/표현 (한국어 뜻)", "단어2 (뜻)"]  // 2개 이하, 없으면 null
     }
   ]
 }
@@ -245,6 +249,9 @@ export async function analyzeToeicImage(imageUrl) {
           : typeof q.rereadCount === 'string' && /^\d+$/.test(q.rereadCount)
             ? parseInt(q.rereadCount, 10)
             : null,
+      keyVocabulary: Array.isArray(q.keyVocabulary) && q.keyVocabulary.length > 0
+        ? q.keyVocabulary.map((v) => String(v).trim()).filter(Boolean).slice(0, 2)
+        : null,
     }
   })
 

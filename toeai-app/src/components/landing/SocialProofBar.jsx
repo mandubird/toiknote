@@ -24,7 +24,7 @@ export default function SocialProofBar() {
       </div>
       <span className="text-white/50">|</span>
       <div className="text-center">
-        <strong className="block text-white">60일</strong>
+        <strong className="block text-white">100일</strong>
         <span className="text-white/80">집중 관리</span>
       </div>
     </div>

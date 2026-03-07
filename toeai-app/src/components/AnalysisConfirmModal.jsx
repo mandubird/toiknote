@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react'
 
+// LC 오답 원인 → 즉각 코치 팁 매핑
+const LC_COACH_TIPS = {
+  발음혼동: '비슷한 발음의 단어를 혼동하는 패턴이에요. 딕테이션 연습으로 귀를 정확히 훈련해 보세요.',
+  집중력분산: '초반 키워드를 놓치는 패턴이에요. 듣기 전 선택지를 미리 훑어보는 습관이 도움돼요.',
+  어휘몰라서: '모르는 단어가 정답을 막았어요. 오늘 이 단어를 꼭 단어장에 추가하고 내일 복습하세요.',
+  속도못따라감: '원어민 속도 적응이 필요해요. 1.2배속 쉐도잉부터 시작해 점차 속도를 높여보세요.',
+  선택지오해: '선택지 해석에서 실수가 났어요. 듣기 전 선택지 키워드를 먼저 체크하는 훈련을 해보세요.',
+  노트테이킹실패: 'Part 4는 노트테이킹이 핵심이에요. 숫자·장소·시간 위주로 짧게 메모하는 연습을 해보세요.',
+}
+
 // STEP 4: 파트별 세부 태그 옵션 (여러 개 선택 가능)
 const PART_TAG_OPTIONS = {
   5: [
@@ -18,10 +28,21 @@ const PART_TAG_OPTIONS = {
   2: [
     { label: '질문 패턴', options: ['의문사질문', '일반의문문', '부정의문문', '선택의문문', '제안/요청', '평서문'] },
     { label: '답변 유형', options: ['직접답변', '우회답변', '부정응답'] },
+    { label: '오답 원인', options: ['발음혼동', '속도못따라감', '어휘몰라서', '집중력분산'] },
   ],
-  1: [{ label: '함정', options: ['동작함정', '위치함정', '유사발음', '수동태'] }],
-  3: [{ label: '유형', options: ['주제', '세부정보', '추론', '의도파악', '다음행동'] }],
-  4: [{ label: '담화', options: ['공지', '안내방송', '광고', '회의', '전화메시지'] }, { label: '유형', options: ['주제', '세부정보', '추론'] }],
+  1: [
+    { label: '함정', options: ['동작함정', '위치함정', '유사발음', '수동태'] },
+    { label: '오답 원인', options: ['발음혼동', '집중력분산', '어휘몰라서'] },
+  ],
+  3: [
+    { label: '유형', options: ['주제', '세부정보', '추론', '의도파악', '다음행동'] },
+    { label: '오답 원인', options: ['속도못따라감', '집중력분산', '어휘몰라서', '선택지오해'] },
+  ],
+  4: [
+    { label: '담화', options: ['공지', '안내방송', '광고', '회의', '전화메시지'] },
+    { label: '유형', options: ['주제', '세부정보', '추론'] },
+    { label: '오답 원인', options: ['속도못따라감', '집중력분산', '어휘몰라서', '노트테이킹실패'] },
+  ],
 }
 
 const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, saving, multiTotal = 1, multiIndex = 0 }) => {
@@ -101,6 +122,9 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       }
     }
 
+    const vocabTags = (initialData?.keyVocabulary || []).map((v) => `어휘:${v}`)
+    const mergedTags = [...new Set([...tagsArray, ...vocabTags])]
+
     onSave({
       imageUrl,
       part,
@@ -109,7 +133,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       question,
       answer: finalAnswer,
       explanation,
-      tags: tagsArray,
+      tags: mergedTags,
       difficulty,
       grammarCategory: initialData?.grammarCategory ?? null,
       grammarSubType: initialData?.grammarSubType ?? null,
@@ -227,6 +251,20 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                   </div>
                 </div>
               )}
+              {/* 핵심 어휘 (어휘 문제일 때만) */}
+              {initialData?.keyVocabulary?.length > 0 && (
+                <div className="pt-2 border-t border-gray-100">
+                  <label className="block text-xs font-medium text-amber-700 mb-1">📖 핵심 단어/표현</label>
+                  <div className="flex flex-wrap gap-1">
+                    {initialData.keyVocabulary.map((v, i) => (
+                      <span key={i} className="text-xs px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">저장 시 단어장에 자동 추가돼요</p>
+                </div>
+              )}
               {/* STEP 3 + v4.01: 세부 분류 (전파트) */}
               {(initialData?.grammarCategory || initialData?.passageType || initialData?.questionPattern || initialData?.part1ImageTrapType || initialData?.part3QuestionType || initialData?.part4LectureType || initialData?.part6BlankType || initialData?.rereadCount != null) && (
                 <div className="pt-2 border-t border-gray-100">
@@ -274,6 +312,17 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                   ))}
                 </div>
               )}
+              {/* LC 오답 원인 코치 팁 */}
+              {partNumber >= 1 && partNumber <= 4 && (() => {
+                const lcCause = userSelectedTags.find((t) => LC_COACH_TIPS[t])
+                if (!lcCause) return null
+                return (
+                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <p className="text-xs font-semibold text-blue-700 mb-1">💡 AI 코치 조언</p>
+                    <p className="text-xs text-blue-800 leading-relaxed">{LC_COACH_TIPS[lcCause]}</p>
+                  </div>
+                )
+              })()}
               {showTimeoutCheck && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input

@@ -52,7 +52,7 @@ const UpgradePage = () => {
 
       {hasActive && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-700">현재 8주 프로그램이 진행 중이에요.</p>
+          <p className="text-gray-700">현재 100일 프로젝트가 진행 중이에요.</p>
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
@@ -66,7 +66,7 @@ const UpgradePage = () => {
       {isExpired && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <p className="text-2xl font-bold text-primary-600 mb-2">Day 60 완료! 🎉</p>
-          <p className="text-gray-600 mb-4">8주 프로그램을 모두 마치셨어요.</p>
+          <p className="text-gray-600 mb-4">100일 프로젝트을 모두 마치셨어요.</p>
           <div className="space-y-3">
             <button
               type="button"
@@ -88,7 +88,7 @@ const UpgradePage = () => {
 
       {isNone && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-700 mb-4">8주 프로그램에 아직 참여하지 않으셨어요. 진단 후 결제하면 시작할 수 있어요.</p>
+          <p className="text-gray-700 mb-4">100일 프로젝트에 아직 참여하지 않으셨어요. 진단 후 결제하면 시작할 수 있어요.</p>
           <button
             type="button"
             onClick={() => navigate('/diagnostic')}
@@ -101,7 +101,7 @@ const UpgradePage = () => {
             onClick={() => navigate('/program')}
             className="w-full mt-2 py-2 border border-gray-300 text-gray-700 rounded-lg"
           >
-            8주 프로그램 안내
+            100일 프로젝트 안내
           </button>
         </div>
       )}

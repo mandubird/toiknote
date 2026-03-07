@@ -14,6 +14,107 @@ import ScoreGaugeCard from '../components/ScoreGaugeCard'
 
 const BADGE_INFO = { none: null, challenger: { emoji: '🥉', name: 'Challenger' }, elite: { emoji: '🥈', name: 'Elite' }, '900': { emoji: '🥇', name: '900 달성' } }
 
+// 파트별 메타 정보
+const PART_META = {
+  1: { label: 'Part 1', name: '사진묘사', section: 'LC' },
+  2: { label: 'Part 2', name: '질의응답', section: 'LC' },
+  3: { label: 'Part 3', name: '짧은 대화', section: 'LC' },
+  4: { label: 'Part 4', name: '설명문', section: 'LC' },
+  5: { label: 'Part 5', name: '단문 공란', section: 'RC' },
+  6: { label: 'Part 6', name: '장문 공란', section: 'RC' },
+  7: { label: 'Part 7', name: '독해', section: 'RC' },
+}
+
+function getPartColor(wrong, cleared) {
+  if (wrong === 0) return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-400', dot: 'bg-gray-300' }
+  const remaining = wrong - cleared
+  if (remaining === 0) return { bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-400' }
+  if (remaining <= 5) return { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', dot: 'bg-yellow-400' }
+  if (remaining <= 15) return { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-400' }
+  return { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', dot: 'bg-red-400' }
+}
+
+function PartMapSection({ partCounts, clearedPerPart, onPartClick }) {
+  const lcParts = [1, 2, 3, 4]
+  const rcParts = [5, 6, 7]
+  const totalWrong = Object.values(partCounts).reduce((s, v) => s + v, 0)
+  const totalCleared = Object.values(clearedPerPart).reduce((s, v) => s + v, 0)
+
+  const renderPart = (partNum) => {
+    const meta = PART_META[partNum]
+    const wrong = partCounts[partNum] ?? 0
+    const cleared = clearedPerPart[partNum] ?? 0
+    const color = getPartColor(wrong, cleared)
+    const noData = wrong === 0
+
+    return (
+      <button
+        key={partNum}
+        type="button"
+        onClick={() => onPartClick(partNum)}
+        className={`flex items-center gap-2 p-2.5 rounded-lg border ${color.bg} ${color.border} text-left w-full transition-opacity active:opacity-70`}
+      >
+        <span className={`w-2 h-2 rounded-full shrink-0 ${color.dot}`} />
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-semibold ${noData ? 'text-gray-400 line-through' : color.text}`}>
+            {meta.label}
+          </p>
+          <p className="text-xs text-gray-500 truncate">{meta.name}</p>
+        </div>
+        <div className="text-right shrink-0">
+          {noData ? (
+            <span className="text-xs text-gray-300">—</span>
+          ) : (
+            <>
+              <p className={`text-xs font-bold ${color.text}`}>{wrong - cleared > 0 ? `${wrong - cleared}개` : '완료'}</p>
+              {cleared > 0 && <p className="text-xs text-emerald-600">✓{cleared}</p>}
+            </>
+          )}
+        </div>
+      </button>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-800">📊 파트별 오답 지도</h3>
+        {totalWrong > 0 && (
+          <span className="text-xs text-gray-500">
+            전체 {totalWrong}개 · 클리어 {totalCleared}개
+          </span>
+        )}
+      </div>
+      {totalWrong === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-2">오답이 없어요. 학습을 시작해보세요!</p>
+      ) : (
+        <div className="flex gap-3">
+          {/* LC */}
+          <div className="flex-1">
+            <p className="text-xs font-medium text-blue-600 mb-1.5">🎧 LC</p>
+            <div className="space-y-1.5">
+              {lcParts.map(renderPart)}
+            </div>
+          </div>
+          {/* RC */}
+          <div className="flex-1">
+            <p className="text-xs font-medium text-violet-600 mb-1.5">📖 RC</p>
+            <div className="space-y-1.5">
+              {rcParts.map(renderPart)}
+            </div>
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-gray-400 mt-2.5">
+        <span className="inline-block w-2 h-2 rounded-full bg-red-400 mr-1" />많음
+        <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 mx-1 ml-2" />조금
+        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mx-1 ml-2" />완료
+        <span className="inline-block w-2 h-2 rounded-full bg-gray-300 mx-1 ml-2" />없음
+      </p>
+    </div>
+  )
+}
+
 const DashboardPage = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -70,7 +171,7 @@ const DashboardPage = () => {
 
       {!inProgram ? (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-700 mb-4">8주 프로그램을 시작하면 여기에 진행 상황이 표시돼요.</p>
+          <p className="text-gray-700 mb-4">100일 프로젝트를 시작하면 여기에 진행 상황이 표시돼요.</p>
           <button
             type="button"
             onClick={() => navigate('/diagnostic')}
@@ -83,7 +184,7 @@ const DashboardPage = () => {
             onClick={() => navigate('/program')}
             className="w-full mt-2 py-2 border border-gray-300 text-gray-700 rounded-lg"
           >
-            8주 프로그램 보기
+            100일 프로젝트 보기
           </button>
         </div>
       ) : (
@@ -149,6 +250,13 @@ const DashboardPage = () => {
           <ScoreGaugeCard
             currentScore={data.predicted_score ?? 0}
             targetScore={data.target_score ?? 900}
+          />
+
+          {/* 파트별 오답 지도 */}
+          <PartMapSection
+            partCounts={data.part_counts ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 }}
+            clearedPerPart={data.cleared_per_part ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 }}
+            onPartClick={(partNum) => navigate(`/home?part=${partNum}`)}
           />
 
           {/* 약점 TOP 3 */}

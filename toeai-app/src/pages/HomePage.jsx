@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useListVersion } from '../contexts/RefreshListContext'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
@@ -10,6 +10,7 @@ const PARTS = ['Part 1', 'Part 2', 'Part 3', 'Part 4', 'Part 5', 'Part 6', 'Part
 const HomePage = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const listVersion = useListVersion()
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,6 +18,16 @@ const HomePage = () => {
   const [selectedPart, setSelectedPart] = useState(null)
   const [selectedTag, setSelectedTag] = useState(null)
   const [showAllTags, setShowAllTags] = useState(false)
+  const [clearFilter, setClearFilter] = useState('all') // 'all' | 'pending' | 'cleared'
+
+  // 파트 지도에서 클릭 시 (?part=N) 자동 필터
+  useEffect(() => {
+    const partParam = searchParams.get('part')
+    if (partParam) {
+      const n = parseInt(partParam, 10)
+      if (n >= 1 && n <= 7) setSelectedPart(`Part ${n}`)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (!user) {
@@ -61,9 +72,14 @@ const HomePage = () => {
     .sort((a, b) => b[1] - a[1])
     .map(([tag]) => tag)
 
+  const clearedCount = questions.filter((q) => q.clearedAt).length
+  const pendingCount = questions.length - clearedCount
+
   const filtered = questions.filter((q) => {
     if (selectedPart && q.part !== selectedPart) return false
     if (selectedTag && !(q.tags || []).includes(selectedTag)) return false
+    if (clearFilter === 'cleared' && !q.clearedAt) return false
+    if (clearFilter === 'pending' && q.clearedAt) return false
     return true
   })
 
@@ -115,7 +131,7 @@ const HomePage = () => {
             onClick={() => navigate('/program')}
             className="mt-3 text-sm text-primary-600 font-medium"
           >
-            8주 프로그램 상세 →
+            100일 프로젝트 상세 →
           </button>
         </div>
       )}
@@ -126,13 +142,37 @@ const HomePage = () => {
           {loading
             ? '불러오는 중…'
             : questions.length > 0
-            ? `총 ${questions.length}개의 오답을 정리했어요`
+            ? `총 ${questions.length}개 · 클리어 ${clearedCount}개 · 미완료 ${pendingCount}개`
             : '카메라 버튼을 눌러 첫 오답을 등록해보세요!'}
         </p>
       </div>
 
       {questions.length > 0 && (
         <div className="mb-4 space-y-3">
+          {/* 클리어 필터 */}
+          <div className="flex gap-2">
+            {[
+              { key: 'all', label: `전체 (${questions.length})` },
+              { key: 'pending', label: `미완료 (${pendingCount})` },
+              { key: 'cleared', label: `클리어 (${clearedCount})` },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setClearFilter(key)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  clearFilter === key
+                    ? key === 'cleared'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <p className="text-xs font-medium text-gray-500">파트</p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -249,7 +289,9 @@ const EmptyState = ({ hasAny }) => (
 
 const QuestionCard = ({ question, onClick }) => (
   <div
-    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:bg-gray-50 active:scale-[0.99] transition"
+    className={`relative bg-white rounded-lg shadow-sm border p-4 cursor-pointer hover:bg-gray-50 active:scale-[0.99] transition ${
+      question.clearedAt ? 'border-green-200' : 'border-gray-200'
+    }`}
     onClick={onClick}
     role="button"
     tabIndex={0}
@@ -261,13 +303,21 @@ const QuestionCard = ({ question, onClick }) => (
       }
     }}
   >
+    {/* CLEAR 배지 */}
+    {question.clearedAt && (
+      <div className="absolute top-3 right-3 flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full border border-green-300">
+        ✓ CLEAR
+      </div>
+    )}
     <div className="flex items-start justify-between mb-2">
       <span className="inline-block px-2 py-1 text-xs font-semibold text-primary-700 bg-primary-100 rounded">
         {question.part}
       </span>
-      <span className="text-xs text-gray-500">{question.date}</span>
+      <span className="text-xs text-gray-500 mr-16">{question.date}</span>
     </div>
-    <p className="text-sm text-gray-800 mb-2 line-clamp-2">{question.question}</p>
+    <p className={`text-sm mb-2 line-clamp-2 ${question.clearedAt ? 'text-gray-400' : 'text-gray-800'}`}>
+      {question.question}
+    </p>
     <div className="flex flex-wrap gap-1">
       {question.tags?.map((tag, idx) => (
         <span key={idx} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">

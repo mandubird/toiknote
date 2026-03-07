@@ -33,6 +33,7 @@ export async function fetchWrongAnswers(userId) {
       imageUrl: d.image_url || d.source_image_url || '',
       difficulty: [1, 2, 3].includes(Number(d.difficulty)) ? Number(d.difficulty) : 2,
       createdAt: d.created_at ? new Date(d.created_at) : new Date(),
+      clearedAt: d.cleared_at ? new Date(d.cleared_at) : null,
     }
   })
 }

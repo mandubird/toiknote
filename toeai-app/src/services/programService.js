@@ -5,6 +5,7 @@ import { performCompleteDiagnosis, getScoreRange } from './diagnosisService'
 import { createWeekStartSnapshot, createWeekEndSnapshot, getSnapshotsForWeek } from './snapshotService'
 import { getTop10WeakTags } from './tagStatsService.js'
 import { generateAICoachComment } from './aiCoachService.js'
+import { countClearedThisWeek } from './clearWrongAnswer.js'
 
 /** 점수 구간 라벨 (계획서: 600 이하는 제외, 700-800 / 800-900 템플릿만 사용) */
 const BAND_700_800 = '700-800'
@@ -109,11 +110,14 @@ const V403_FIXED_WEEKS = [
   { week: 8, focus_parts: [5, 7], focus_tags: ['약점 집중'], daily_task_count: 25, strategy_text: '점수 예측 + 최종 전략' },
 ]
 
+const MAX_PROGRAM_DAYS = 100 // v4.26: 100일 프로젝트 최대값
+
 /**
- * v4.03: 진단 완료 후 Week1 시작 (고정 8주 구조)
+ * v4.26: 진단 완료 후 Week1 시작 (시험일 기반 100일 프로젝트)
  * @param {string} userId
+ * @param {string|null} examDate - 'YYYY-MM-DD' 형식. 없으면 100일로 자동 설정
  */
-export async function startProgramV403(userId) {
+export async function startProgramV403(userId, examDate = null) {
   if (!userId) throw new Error('로그인이 필요해요.')
 
   const plans = V403_FIXED_WEEKS.map((p) => ({
@@ -137,21 +141,37 @@ export async function startProgramV403(userId) {
   }
 
   const { data: userRow } = await supabase.from('users').select('bonus_days').eq('id', userId).maybeSingle()
-  const bonusDays = Math.min(60, Math.max(0, Number(userRow?.bonus_days) || 0))
+  const bonusDays = Math.min(30, Math.max(0, Number(userRow?.bonus_days) || 0))
 
   const startDate = new Date()
-  const endDate = new Date(startDate)
-  endDate.setDate(endDate.getDate() + 56 + bonusDays)
+  const maxEndDate = new Date(startDate)
+  maxEndDate.setDate(maxEndDate.getDate() + MAX_PROGRAM_DAYS + bonusDays)
+
+  // 시험일이 있으면 min(시험일, 오늘+100일) 적용
+  let endDate = maxEndDate
+  let parsedExamDate = null
+  if (examDate) {
+    parsedExamDate = new Date(examDate)
+    parsedExamDate.setHours(23, 59, 59, 0)
+    if (parsedExamDate < maxEndDate) {
+      endDate = parsedExamDate
+    }
+  }
+
+  const updatePayload = {
+    program_status: 'active',
+    program_start_date: startDate.toISOString(),
+    program_end_date: endDate.toISOString(),
+    current_week: 1,
+    last_week_update: startDate.toISOString(),
+  }
+  if (parsedExamDate) {
+    updatePayload.exam_date = examDate // 'YYYY-MM-DD'
+  }
 
   const { error: userErr } = await supabase
     .from('users')
-    .update({
-      program_status: 'active',
-      program_start_date: startDate.toISOString(),
-      program_end_date: endDate.toISOString(),
-      current_week: 1,
-      last_week_update: startDate.toISOString(),
-    })
+    .update(updatePayload)
     .eq('id', userId)
   if (userErr) throw userErr
 
@@ -296,7 +316,7 @@ export async function getProgramPlan(userId) {
   ] = await Promise.all([
     supabase
       .from('users')
-      .select('program_status, program_start_date, program_end_date, current_week, last_week_update')
+      .select('program_status, program_start_date, program_end_date, current_week, last_week_update, exam_date')
       .eq('id', userId)
       .maybeSingle(),
     supabase
@@ -315,12 +335,13 @@ export async function getProgramPlan(userId) {
     programStartDate: userRow?.program_start_date ?? null,
     programEndDate: userRow?.program_end_date ?? null,
     lastWeekUpdate: userRow?.last_week_update ?? null,
+    examDate: userRow?.exam_date ?? null,
     plans: plans || [],
     userProgram: userRow,
   }
 }
 
-const DAYS_TOTAL = 60
+const DAYS_TOTAL = 100
 
 /**
  * v4.04 + v4.1: 대시보드 요약 (코칭 화면·60일 진행바·약점 TOP3·점수 이력)
@@ -343,14 +364,24 @@ export async function getDashboardSummary(userId) {
   }
   if (!userId) return empty
 
-  const [plan, reports, profile, { data: scorePred }, tagStats, top10Weak] = await Promise.all([
+  const [plan, reports, profile, { data: scorePred }, tagStats, top10Weak, { data: clearedRows }] = await Promise.all([
     getProgramPlan(userId),
     getWeeklyReports(userId),
     getUserProfile(userId),
     supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
     fetchTagStats(userId),
     getTop10WeakTags(userId).catch(() => []),
+    supabase.from('wrong_answers').select('part_number').eq('user_id', userId).not('cleared_at', 'is', null),
   ])
+
+  // 파트별 클리어 수 집계
+  const clearedPerPart = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 }
+  if (clearedRows) {
+    clearedRows.forEach((row) => {
+      const p = Number(row.part_number)
+      if (p >= 1 && p <= 7) clearedPerPart[p] = (clearedPerPart[p] || 0) + 1
+    })
+  }
 
   const currentPlan = plan?.plans?.find((p) => p.week === plan.currentWeek)
   const lastReport = reports?.length ? reports[reports.length - 1] : null
@@ -395,6 +426,8 @@ export async function getDashboardSummary(userId) {
     programStatus: plan?.status ?? 'none',
     weakness_top3: weaknessTop3,
     score_history: scoreHistory,
+    part_counts: tagStats?.partCounts ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 },
+    cleared_per_part: clearedPerPart,
   }
 }
 
@@ -442,6 +475,13 @@ export async function generateWeeklyReport(userId, week) {
   const nextPlan = plans?.find((p) => p.week === week + 1)
   const nextWeekStrategy = nextPlan?.strategy_text ?? null
 
+  // 이번 주 클리어한 오답 수 집계 (스냅샷 기준 날짜)
+  const weekStart = startSnap?.created_at
+    ? new Date(startSnap.created_at)
+    : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const weekEnd = new Date()
+  const clearedThisWeek = await countClearedThisWeek(userId, weekStart, weekEnd).catch(() => 0)
+
   let payload = {
     user_id: userId,
     week,
@@ -456,6 +496,7 @@ export async function generateWeeklyReport(userId, week) {
     next_week_strategy: nextWeekStrategy,
     completion_rate: null,
     ai_feedback: null,
+    cleared_count: clearedThisWeek,
   }
 
   if (startSnap && endSnap) {
@@ -537,6 +578,155 @@ export async function advanceToNextWeek(userId) {
 
   if (nextWeek <= 8) await createWeekStartSnapshot(userId, nextWeek).catch(() => {})
   return { done: nextWeek >= 8, currentWeek: nextWeek }
+}
+
+/**
+ * v4.27: 날짜까지 남은 일수 (서비스 레이어용)
+ */
+function calcDaysUntil(dateStr) {
+  if (!dateStr) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr)
+  target.setHours(0, 0, 0, 0)
+  return Math.ceil((target - today) / (1000 * 60 * 60 * 24))
+}
+
+/**
+ * v4.27: 압축 플랜 뷰 모델 생성 (순수 함수 — DB 호출 없음)
+ *
+ * DB는 week 단위 그대로 유지.
+ * 시험일까지 남은 일수 기준으로 week → block 동적 매핑.
+ *
+ * 압축 비율  = 56 / days_left
+ * daily_task_count = min(round(avg_base × ratio), cap)
+ *
+ * D-57+   → null (압축 없음, week 그대로)
+ * D-35~56 → 4 blocks: [1,2] [3,4] [5,6] [7,8]  cap=35
+ * D-21~34 → 3 blocks: [1,2,3] [4,5,6] [7,8]    cap=35
+ * D-20-   → 1 survival block                     cap=28
+ *
+ * @param {Array} plans  - user_program_plans rows (week 1~8)
+ * @param {string} examDate - 'YYYY-MM-DD'
+ * @returns {Array|null}
+ */
+export function buildCompressedPlan(plans, examDate) {
+  if (!plans?.length || !examDate) return null
+
+  const daysLeft = calcDaysUntil(examDate)
+  if (daysLeft === null) return null
+
+  // 티어 결정 (ProgramPage의 getCompressionTier와 동일 기준)
+  let tier
+  if (daysLeft > 56)      tier = 'none'
+  else if (daysLeft >= 35) tier = 'light'
+  else if (daysLeft >= 21) tier = 'medium'
+  else                     tier = 'emergency'
+
+  if (tier === 'none') return null
+
+  const compressionRatio = 56 / Math.max(daysLeft, 1)
+
+  // ── Survival mode (D-20 이하) ──────────────────────────────────────────
+  if (tier === 'emergency') {
+    const allTags  = [...new Set(plans.flatMap((p) => p.focus_tags  || []))]
+    const allParts = [...new Set(plans.flatMap((p) => p.focus_parts || []))]
+    const avgBase  = plans.reduce((s, p) => s + (p.daily_task_count ?? 20), 0) / plans.length
+    return [{
+      block_id:       1,
+      label:          '핵심 집중 미션',
+      week_label:     `Week 1~${plans.length}`,
+      original_weeks: plans.map((p) => p.week),
+      duration_days:  daysLeft,
+      focus_tags:     allTags.slice(0, 5),
+      focus_parts:    allParts.slice(0, 3),
+      strategy_text:  '실전 최적화 집중 — 가장 취약한 파트 핵심 태그만',
+      daily_task_count: Math.min(Math.round(avgBase * compressionRatio), 28),
+      tier,
+    }]
+  }
+
+  // ── Compressed mode (D-21~56) ──────────────────────────────────────────
+  const BLOCK_GROUPS = tier === 'light'
+    ? [[1, 2], [3, 4], [5, 6], [7, 8]]   // 4 blocks
+    : [[1, 2, 3], [4, 5, 6], [7, 8]]     // 3 blocks
+  const DAILY_CAP = 35
+
+  return BLOCK_GROUPS.map((weekNums, idx) => {
+    const weekPlans = plans.filter((p) => weekNums.includes(p.week))
+    if (!weekPlans.length) return null
+
+    const allTags  = [...new Set(weekPlans.flatMap((p) => p.focus_tags  || []))]
+    const allParts = [...new Set(weekPlans.flatMap((p) => p.focus_parts || []))]
+
+    // 일 평균 문제 수 × 압축 비율, cap 적용
+    const avgBase = weekPlans.reduce((s, p) => s + (p.daily_task_count ?? 20), 0) / weekPlans.length
+    const daily   = Math.min(Math.round(avgBase * compressionRatio), DAILY_CAP)
+
+    // 기간 (block당 weeks 비율에 따라 배분)
+    const durationDays = Math.max(1, Math.round(daysLeft * weekNums.length / 8))
+
+    // 전략 텍스트 병합 (중복 제거, 최대 2개)
+    const strategies   = [...new Set(weekPlans.map((p) => p.strategy_text).filter(Boolean))]
+    const strategyText = strategies.slice(0, 2).join(' · ')
+
+    const weekLabel = weekNums.length === 1
+      ? `Week ${weekNums[0]}`
+      : `Week ${weekNums[0]}~${weekNums[weekNums.length - 1]}`
+
+    return {
+      block_id:       idx + 1,
+      label:          `집중 블록 ${idx + 1}`,
+      week_label:     weekLabel,
+      original_weeks: weekNums,
+      duration_days:  durationDays,
+      focus_tags:     allTags,
+      focus_parts:    allParts,
+      strategy_text:  strategyText,
+      daily_task_count: daily,
+      tier,
+    }
+  }).filter(Boolean)
+}
+
+/**
+ * v4.27: 시험일 변경 — exam_date + program_end_date 재계산
+ * program_start_date 기준 최대 100일(+bonus_days) 이내로 조정
+ * @param {string} userId
+ * @param {string} examDate - 'YYYY-MM-DD'
+ * @returns {Promise<{ examDate: string, programEndDate: string }>}
+ */
+export async function updateExamDate(userId, examDate) {
+  if (!userId || !examDate) throw new Error('필수 파라미터가 없습니다.')
+
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('program_start_date, bonus_days')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const startDate = userRow?.program_start_date
+    ? new Date(userRow.program_start_date)
+    : new Date()
+  const bonusDays = Math.min(30, Math.max(0, Number(userRow?.bonus_days) || 0))
+
+  const maxEndDate = new Date(startDate)
+  maxEndDate.setDate(maxEndDate.getDate() + MAX_PROGRAM_DAYS + bonusDays)
+
+  const parsedExamDate = new Date(examDate)
+  parsedExamDate.setHours(23, 59, 59, 0)
+  const endDate = parsedExamDate < maxEndDate ? parsedExamDate : maxEndDate
+
+  const { error } = await supabase
+    .from('users')
+    .update({
+      exam_date: examDate,
+      program_end_date: endDate.toISOString(),
+    })
+    .eq('id', userId)
+
+  if (error) throw error
+  return { examDate, programEndDate: endDate.toISOString() }
 }
 
 /**

@@ -138,13 +138,13 @@ const DiagnosticPage = () => {
             <CtaButton type="START_PROGRAM" position="diagnosis_result" size="large" />
           </div>
           <div className="mt-4 bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-            <p className="text-gray-700 mb-4">진단이 완료되었어요. 8주 프로그램은 결제 후 Week1이 시작돼요. 프로그램 화면에서 결제하고 시작할 수 있어요.</p>
+            <p className="text-gray-700 mb-4">진단이 완료되었어요. 100일 프로젝트는 결제 후 시험일을 입력하면 시작돼요. 프로그램 화면에서 결제하고 시작할 수 있어요.</p>
             <button
               type="button"
               onClick={() => navigate('/program')}
               className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
             >
-              8주 프로그램 보기
+              100일 프로젝트 보기
             </button>
           </div>
 
