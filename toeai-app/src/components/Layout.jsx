@@ -11,6 +11,7 @@ import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
 import { getSubscription, getFreeLimit } from '../services/subscription'
 import { useRefreshList } from '../contexts/RefreshListContext'
 import PaywallModal from './PaywallModal'
+import OnboardingModal from './OnboardingModal'
 
 const Layout = () => {
   const location = useLocation()
@@ -190,6 +191,9 @@ const Layout = () => {
         onSave={handleConfirmSave}
         saving={saving}
       />
+
+      {/* 첫 방문 온보딩 */}
+      <OnboardingModal />
 
       {/* 결제 유도 모달 (5회 초과 시) */}
       <PaywallModal

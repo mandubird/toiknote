@@ -4,15 +4,19 @@ import { useAuth } from '../contexts/AuthContext'
 import { fetchTagStats, calculateEstimatedScore } from '../services/fetchTagStats'
 import { fetchSegmentStats } from '../services/fetchSegmentStats'
 import { getSubscription } from '../services/subscription'
+import { getUserProfile } from '../services/userProfile'
+import MasteryBoard from '../components/MasteryBoard'
 
 const PART_LABELS = { 1: 'Part 1', 2: 'Part 2', 3: 'Part 3', 4: 'Part 4', 5: 'Part 5', 6: 'Part 6', 7: 'Part 7' }
 const CHART_COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a']
 
 const StatsPage = () => {
   const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState('stats')
   const [tagStats, setTagStats] = useState(null)
   const [segmentStats, setSegmentStats] = useState(null)
   const [subscribed, setSubscribed] = useState(false)
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,19 +24,22 @@ const StatsPage = () => {
       setTagStats(null)
       setSegmentStats(null)
       setSubscribed(false)
+      setProfile(null)
       setLoading(false)
       return
     }
-    Promise.all([fetchTagStats(user.id), fetchSegmentStats(user.id), getSubscription(user.id)])
-      .then(([tags, segments, sub]) => {
+    Promise.all([fetchTagStats(user.id), fetchSegmentStats(user.id), getSubscription(user.id), getUserProfile(user.id)])
+      .then(([tags, segments, sub, prof]) => {
         setTagStats(tags)
         setSegmentStats(segments)
         setSubscribed(sub.paid)
+        setProfile(prof)
       })
       .catch(() => {
         setTagStats(null)
         setSegmentStats(null)
         setSubscribed(false)
+        setProfile(null)
       })
       .finally(() => setLoading(false))
   }, [user])
@@ -48,7 +55,9 @@ const StatsPage = () => {
   const totalWrong = tagStats?.totalWrong ?? 0
   const lcWrong = tagStats?.lcWrong ?? 0
   const rcWrong = tagStats?.rcWrong ?? 0
-  const estimatedScore = totalWrong > 0 ? calculateEstimatedScore({ lcWrong, rcWrong }) : null
+  const currentScore = profile?.currentScore > 0 ? profile.currentScore : null
+  // 오답 50개 이상일 때만 추정 점수 의미 있음 (그 이하면 심각하게 왜곡됨)
+  const estimatedScore = totalWrong >= 50 ? calculateEstimatedScore({ lcWrong, rcWrong }) : null
 
   const partChartData = tagStats
     ? [1, 2, 3, 4, 5, 6, 7]
@@ -68,6 +77,33 @@ const StatsPage = () => {
 
   return (
     <div className="p-4">
+      {/* 탭 */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#F3F4F6', borderRadius: 12, padding: 4 }}>
+        {[{ key: 'stats', label: '통계' }, { key: 'mastery', label: '약점 체크리스트' }].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: activeTab === tab.key ? 700 : 400,
+              background: activeTab === tab.key ? '#fff' : 'transparent',
+              color:      activeTab === tab.key ? '#1D4ED8' : '#6B7280',
+              boxShadow:  activeTab === tab.key ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 약점 체크리스트 탭 */}
+      {activeTab === 'mastery' && (
+        <MasteryBoard userId={user?.id} />
+      )}
+
+      {/* 통계 탭 */}
+      {activeTab === 'stats' && <>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">학습 통계</h2>
         <p className="text-sm text-gray-600">나의 토익 학습 현황을 한눈에 확인하세요</p>
@@ -81,18 +117,34 @@ const StatsPage = () => {
         </p>
       </div>
 
-      {/* 추정 점수 */}
+      {/* 현재 점수 + 오답 수 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
-        <p className="text-sm text-gray-600 mb-1">총 오답 수</p>
-        <p className="text-4xl font-bold text-primary-600 mb-3">{totalWrong}개</p>
-        {estimatedScore != null && totalWrong > 0 && (
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <p className="text-sm text-gray-600 mb-1">총 오답 수</p>
+            <p className="text-4xl font-bold text-primary-600">{totalWrong}개</p>
+          </div>
+          {currentScore != null && (
+            <div className="text-right">
+              <p className="text-sm text-gray-600 mb-1">입력한 현재 점수</p>
+              <p className="text-3xl font-bold text-gray-900">{currentScore}점</p>
+            </div>
+          )}
+        </div>
+        {estimatedScore != null ? (
           <>
-            <p className="text-sm text-gray-600 mb-1">추정 점수 (오답 비율 기반)</p>
-            <p className="text-3xl font-bold text-gray-900">{estimatedScore}점</p>
-            <p className="text-xs text-gray-500 mt-1">
-              저장한 오답 {totalWrong}개 기준, LC/RC 오답 비율로 산출한 참고용 점수예요.
-            </p>
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-sm text-gray-600 mb-1">오답 기반 추정 점수</p>
+              <p className="text-2xl font-bold text-gray-700">{estimatedScore}점</p>
+              <p className="text-xs text-gray-500 mt-1">
+                저장한 오답 {totalWrong}개 기준, LC/RC 오답 비율로 산출한 참고용 점수예요.
+              </p>
+            </div>
           </>
+        ) : totalWrong > 0 && (
+          <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
+            💡 오답을 50개 이상 기록하면 앱 기반 추정 점수를 계산할 수 있어요. (현재 {totalWrong}개)
+          </p>
         )}
       </div>
 
@@ -324,6 +376,7 @@ const StatsPage = () => {
           </div>
         )}
       </div>
+      </>}
     </div>
   )
 }

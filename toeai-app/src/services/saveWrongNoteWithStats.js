@@ -2,6 +2,35 @@ import { supabase } from '../lib/supabase'
 
 const PENDING_STORAGE_KEY = 'toeai_pending_wrong_answers'
 
+// LC 오답 원인 키워드 — AnalysisConfirmModal의 PART_TAG_OPTIONS와 동기화
+const LC_ERROR_REASONS = new Set([
+  '발음혼동', '우회답변', '집중력분산', '속도못따라감',
+  '선택지오해', '노트테이킹실패', '어휘몰라서',
+])
+
+/**
+ * LC 파트(1~4) 오답에서 사용자가 선택한 오류 원인을 lc_error_logs 테이블에 저장
+ * @param {string} userId
+ * @param {number} partNumber
+ * @param {string[]} userSelectedTags
+ * @param {string|null} wrongAnswerId
+ */
+async function saveLcErrorLog(userId, partNumber, userSelectedTags, wrongAnswerId) {
+  if (partNumber < 1 || partNumber > 4) return
+  const reasons = (userSelectedTags || []).filter((t) => LC_ERROR_REASONS.has(t))
+  if (!reasons.length) return
+
+  const rows = reasons.map((reason) => ({
+    user_id:         userId,
+    wrong_answer_id: wrongAnswerId ?? null,
+    part_number:     partNumber,
+    lc_error_reason: reason,
+  }))
+
+  const { error } = await supabase.from('lc_error_logs').insert(rows)
+  if (error) console.warn('lc_error_logs 저장 실패 (비필수):', error)
+}
+
 function parsePartNumber(partStr) {
   if (typeof partStr === 'number' && partStr >= 1 && partStr <= 7) return partStr
   const match = String(partStr || '').match(/(\d+)/)
@@ -64,6 +93,11 @@ export async function saveWrongNoteWithStats(userId, data) {
     })
 
     if (error) throw error
+
+    // LC 오류 원인 로그 저장 (비필수 — 실패해도 저장 성공으로 처리)
+    const wrongAnswerId = typeof noteId === 'string' ? noteId : null
+    saveLcErrorLog(userId, partNumber, data.userSelectedTags, wrongAnswerId)
+
     return { success: true }
   } catch (err) {
     const item = { userId, ...data, failedAt: Date.now() }

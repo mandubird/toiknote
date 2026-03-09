@@ -22,6 +22,12 @@ import AdminPage from './pages/AdminPage'
 import AdminLayout from './pages/AdminLayout'
 import AdminReviewPanel from './components/AdminReviewPanel'
 import AdminKpiDashboard from './pages/AdminKpiDashboard'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
+import RefundPolicyPage from './pages/RefundPolicyPage'
+import ContactPage from './pages/ContactPage'
+import FaqPage from './pages/FaqPage'
+import AboutPage from './pages/AboutPage'
 
 function App() {
   return (
@@ -31,6 +37,12 @@ function App() {
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/900-jump" element={<LandingDetailPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/admin" element={<AdminPage />}>
             <Route element={<AdminLayout />}>
               <Route index element={<AdminReviewPanel />} />

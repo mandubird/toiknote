@@ -394,15 +394,27 @@ export async function getDashboardSummary(userId) {
   }
 
   const totalWrong = tagStats?.totalWrong || 1
+  // #7 WeaknessRemovalRoadmap: weaknessScore/frequencyWeight/hasTimePressure 포함한 상세 데이터
   const weaknessTop3 =
     Array.isArray(top10Weak) && top10Weak.length > 0
       ? top10Weak.slice(0, 3).map((t) => ({
           tag: t.tagName,
           count: t.attemptCount,
           rate: Math.round((1 - t.accuracyRate) * 1000) / 10,
+          accuracyRate: t.accuracyRate,
+          weaknessScore: t.weaknessScore,
+          part: t.part,
+          category: t.category,
+          frequencyWeight: t.frequencyWeight ?? 1.0,
+          hasTimePressure: t.hasTimePressure ?? false,
         }))
       : Object.entries(tagStats?.tagCounts || {})
-          .map(([tag, count]) => ({ tag, count, rate: Math.round((Number(count) / totalWrong) * 1000) / 10 }))
+          .map(([tag, count]) => ({
+            tag, count,
+            rate: Math.round((Number(count) / totalWrong) * 1000) / 10,
+            accuracyRate: null, weaknessScore: null, part: null, category: null,
+            frequencyWeight: 1.0, hasTimePressure: false,
+          }))
           .sort((a, b) => b.count - a.count)
           .slice(0, 3)
 
@@ -428,6 +440,9 @@ export async function getDashboardSummary(userId) {
     score_history: scoreHistory,
     part_counts: tagStats?.partCounts ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 },
     cleared_per_part: clearedPerPart,
+    // #8 ScoreBandStrategyMode: 점수대별 전략을 위해 currentScore 포함
+    current_score: profile?.currentScore ?? null,
+    examDate: plan?.examDate ?? null,
   }
 }
 

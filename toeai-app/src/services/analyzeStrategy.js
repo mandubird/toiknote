@@ -119,13 +119,14 @@ ${timeoutText ? `- ${timeoutText}` : ''}
 
 ${currentScore}점에서 ${targetScore}점으로 올리는 구체적인 전략을 제시하라.
 priorityFocus에는 Part 5 문법이 약하면 "Part 5 문법 - 특히 [세부 유형]" 형태로 세부 문법 약점을 명시하라.
+expectedImprovement는 현재 ${currentScore}점과 목표 ${targetScore}점(차이 ${targetScore - currentScore}점)을 바탕으로 현실적인 개선 폭을 계산하라. 예시 값(+80점 등)을 그대로 쓰지 말고 실제 데이터 기반으로 산출하라.
 반드시 아래 JSON만 출력하라 (다른 말 없이):
 {
   "priorityFocus": "우선 공략 영역 한 문장 (문법 약점이 있으면 세부 유형 포함)",
   "grammarWeaknessSummary": "Part 5 세부 문법 약점 한 줄 요약. 예: 시제 - 특히 현재완료",
   "dailyPlan": "하루 학습 루틴 (2~3문장)",
   "weeklyGoal": "주간 목표 한 문장",
-  "expectedImprovement": "예상 개선 (예: 4주 후 +80점)",
+  "expectedImprovement": "N주 후 +N점 → ${currentScore}+N점 형태로 현재 점수 기반으로 작성. 예시 값을 복사하지 말 것",
   "specificTips": ["팁1", "팁2", "팁3"]
 }`
 

@@ -11,8 +11,24 @@ import ReviewForm from '../components/ReviewForm'
 import ExpiryWarningBanner from '../components/ExpiryWarningBanner'
 import ExpiryModal from '../components/ExpiryModal'
 import ScoreGaugeCard from '../components/ScoreGaugeCard'
+import WeaknessRoadmapCard from '../components/WeaknessRoadmapCard'
+import ScoreBandStrategyCard from '../components/ScoreBandStrategyCard'
 
 const BADGE_INFO = { none: null, challenger: { emoji: '🥉', name: 'Challenger' }, elite: { emoji: '🥈', name: 'Elite' }, '900': { emoji: '🥇', name: '900 달성' } }
+
+/**
+ * #10 OneLineCoachAdvice: 약점 Top1 + 시간압박 여부로 40자 이내 한 줄 조언
+ */
+function buildOneLineAdvice(weaknesses) {
+  if (!weaknesses?.length) return null
+  const top = weaknesses[0]
+  if (!top?.tag) return null
+  if (top.hasTimePressure) {
+    return `${top.tag} — 시간 압박 해소가 먼저. 풀이 속도부터 잡으세요`
+  }
+  const freq = top.frequencyWeight >= 1.6 ? '고빈출 ' : top.frequencyWeight >= 1.3 ? '빈출 ' : ''
+  return `${freq}${top.tag} 집중 공략이 지금 점수 올릴 가장 빠른 길`
+}
 
 // 파트별 메타 정보
 const PART_META = {
@@ -164,6 +180,8 @@ const DashboardPage = () => {
 
   const inProgram = data?.current_week >= 1
   const progressPercent = data?.days_total ? Math.min(100, (data.days_elapsed / data.days_total) * 100) : 0
+  // #10 OneLineCoachAdvice
+  const oneLineAdvice = buildOneLineAdvice(data?.weakness_top3)
 
   return (
     <div className="p-4 pb-8">
@@ -215,14 +233,29 @@ const DashboardPage = () => {
             <div className="flex justify-between gap-4">
               <div>
                 <p className="text-xs text-gray-500">현재 예상 점수</p>
-                <p className="text-lg font-bold text-primary-700">{data.predicted_score ?? '-'}점</p>
+                <p className="text-lg font-bold text-primary-700">
+                  {data.predicted_score != null ? `${data.predicted_score}점` : '미입력'}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">목표 점수</p>
-                <p className="text-lg font-bold text-gray-800">{data.target_score ?? '-'}점</p>
+                <p className="text-lg font-bold text-gray-800">
+                  {data.target_score != null ? `${data.target_score}점` : '-'}
+                </p>
               </div>
             </div>
           </div>
+
+          {/* #10 OneLineCoachAdvice */}
+          {oneLineAdvice && (
+            <div className="bg-primary-600 rounded-xl px-4 py-3 mb-4 flex items-start gap-2">
+              <span className="text-white text-base shrink-0">💬</span>
+              <p className="text-sm font-medium text-white leading-snug">{oneLineAdvice}</p>
+            </div>
+          )}
+
+          {/* #8 ScoreBandStrategyCard */}
+          <ScoreBandStrategyCard currentScore={data.current_score} />
 
           {/* 이번 주 미션 카드 */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
@@ -247,10 +280,16 @@ const DashboardPage = () => {
             </button>
           </div>
 
-          <ScoreGaugeCard
-            currentScore={data.predicted_score ?? 0}
-            targetScore={data.target_score ?? 900}
-          />
+          {data.predicted_score != null ? (
+            <ScoreGaugeCard
+              currentScore={data.predicted_score}
+              targetScore={data.target_score ?? 900}
+            />
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm text-center">
+              <p className="text-sm text-gray-500">오답을 찍으면 AI가 예상 점수를 계산해줘요 📸</p>
+            </div>
+          )}
 
           {/* 파트별 오답 지도 */}
           <PartMapSection
@@ -259,21 +298,8 @@ const DashboardPage = () => {
             onPartClick={(partNum) => navigate(`/home?part=${partNum}`)}
           />
 
-          {/* 약점 TOP 3 */}
-          {data.weakness_top3?.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
-              <h3 className="text-sm font-medium text-gray-800 mb-3">AI 분석 약점 TOP 3</h3>
-              <ul className="space-y-2">
-                {data.weakness_top3.map((w, idx) => (
-                  <li key={w.tag} className="flex items-center gap-2 text-sm">
-                    <span>{idx + 1}️⃣</span>
-                    <span className="font-medium text-gray-800">{w.tag}</span>
-                    <span className="text-gray-500">(오답률 {w.rate}%)</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* #7 WeaknessRoadmapCard */}
+          <WeaknessRoadmapCard weaknesses={data.weakness_top3} />
 
           {/* 점수 변화 그래프 */}
           {data.score_history?.length > 0 && (
@@ -282,19 +308,23 @@ const DashboardPage = () => {
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={data.score_history} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                  <YAxis domain={[600, 990]} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    domain={[
+                      (dataMin) => Math.max(0, Math.floor((dataMin - 50) / 50) * 50),
+                      990,
+                    ]}
+                    tick={{ fontSize: 11 }}
+                  />
                   <Tooltip formatter={(v) => [`${v}점`, '예상 점수']} />
                   <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
-              {data.score_history.length > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Week {data.current_week}: {data.predicted_score ?? '-'}점
-                  {data.accuracy_change != null && data.accuracy_change > 0 && (
-                    <span className="text-green-600 ml-1">(+{data.accuracy_change}%) ↗️</span>
-                  )}
-                </p>
-              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Week {data.current_week}: {data.predicted_score != null ? `${data.predicted_score}점` : '-'}
+                {data.accuracy_change != null && data.accuracy_change > 0 && (
+                  <span className="text-green-600 ml-1">(+{data.accuracy_change}%) ↗️</span>
+                )}
+              </p>
             </div>
           )}
 

@@ -22,7 +22,7 @@ const TIME_BENCHMARKS = {
 export async function updateUserTagStats(userId, tagId, isCorrect, solveTimeSeconds) {
   const { data: tag, error: tagErr } = await supabase
     .from('tag_master')
-    .select('weight, depth, part, category')
+    .select('weight, depth, part, category, frequency_weight')
     .eq('id', tagId)
     .single()
 
@@ -55,9 +55,11 @@ export async function updateUserTagStats(userId, tagId, isCorrect, solveTimeSeco
   const lastAttempted = existing?.last_attempted_at ? new Date(existing.last_attempted_at) : null
   const within30Days = lastAttempted && (Date.now() - lastAttempted.getTime()) < 30 * 24 * 60 * 60 * 1000
   const effectiveWeight = within30Days ? tag.weight * 1.2 : tag.weight
+  // #1 비출 문법 우선순위: frequency_weight 곱해서 출제빈도 반영
+  const frequencyWeight = tag.frequency_weight ?? 1.0
 
   const weaknessScore =
-    (1 - accuracyRate) * effectiveWeight + timePenalty + (tag.depth * 0.05)
+    (1 - accuracyRate) * effectiveWeight * frequencyWeight + timePenalty + (tag.depth * 0.05)
 
   await supabase.from('user_tag_stats').upsert(
     {
@@ -83,7 +85,7 @@ export async function getTop10WeakTags(userId) {
   const { data, error } = await supabase
     .from('user_tag_stats')
     .select(
-      'weakness_score, attempt_count, correct_count, average_time_seconds, tag_master!tag_id(id, tag_code, tag_name, category, part)'
+      'weakness_score, attempt_count, correct_count, average_time_seconds, tag_master!tag_id(id, tag_code, tag_name, category, part, frequency_weight, depth)'
     )
     .eq('user_id', userId)
     .gte('attempt_count', 3)
@@ -97,6 +99,11 @@ export async function getTop10WeakTags(userId) {
     const attemptCount = row.attempt_count || 0
     const correctCount = row.correct_count || 0
     const accuracyRate = attemptCount > 0 ? correctCount / attemptCount : 0
+    const avgTime = row.average_time_seconds ?? 0
+    // 시간 압박 여부: 파트별 기준 대비 20% 초과
+    const TIME_BENCHMARKS = { P7: 90, P5: 60, P6: 60, RC: 60, LC: 30, META: 0 }
+    const benchmark = TIME_BENCHMARKS[tag.part ?? 'RC'] ?? 60
+    const hasTimePressure = benchmark > 0 && avgTime > benchmark * 1.2
     return {
       tagId: tag.id,
       tagCode: tag.tag_code ?? '',
@@ -106,7 +113,10 @@ export async function getTop10WeakTags(userId) {
       weaknessScore: row.weakness_score ?? 0,
       accuracyRate: Math.round(accuracyRate * 10000) / 10000,
       attemptCount,
-      averageTime: row.average_time_seconds ?? 0,
+      averageTime: avgTime,
+      frequencyWeight: tag.frequency_weight ?? 1.0,
+      depth: tag.depth ?? 1,
+      hasTimePressure,
     }
   })
 }

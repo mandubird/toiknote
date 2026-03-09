@@ -2,8 +2,9 @@
  * v4.27: 토답 900 점프 프로젝트 - 전환용 랜딩페이지
  * Hero, 문제 공감, 점수 정체 구간, AI 진단 예시(정적) + CTA, 프로그램 구조, 수치 예시, 가격, CTA
  */
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { PublicFooter } from '../components/PublicLayout'
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -257,6 +258,7 @@ const LandingPage = () => {
           <p className="mt-3 text-sm text-gray-500">결제 후 즉시 프로그램 시작 가능</p>
         </div>
       </section>
+      <PublicFooter />
     </div>
   )
 }
