@@ -23,8 +23,8 @@ const LandingPage = () => {
       >
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">850에서 멈춰 있나요?</h1>
         <h2 className="mt-4 text-xl font-semibold sm:text-2xl md:text-3xl">900은 전략의 문제입니다.</h2>
-        <p className="mt-6 text-lg opacity-95">AI 약점 분석 기반 100일 관리 시스템</p>
-        <p className="mt-1 text-sm opacity-80">핵심 8주 커리큘럼 + 시험일까지 맞춤 압축 플랜</p>
+        <p className="mt-6 text-lg opacity-95">AI 약점 분석 기반 D-day 압축 관리 시스템</p>
+        <p className="mt-1 text-sm opacity-80">시험일까지 맞춤 압축 플랜</p>
         <button
           type="button"
           onClick={() => (user ? navigate('/diagnostic') : navigate('/settings'))}
@@ -33,7 +33,7 @@ const LandingPage = () => {
           무료 점수 진단 받기 →
         </button>
         <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm opacity-90">
-          <span>✓ 첫 1기 5명과 함께 100일 실험 시작</span>
+          <span>✓ 첫 1기 5명과 함께 실험 시작</span>
           <span>✓ 실제 점수 데이터 공개 예정</span>
           <span>✓ 피드백 기반 지속 개선</span>
         </div>
@@ -198,7 +198,7 @@ const LandingPage = () => {
             <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
               <div className="text-2xl font-bold text-primary-600">첫 5명</div>
               <div className="mt-1 font-medium text-gray-700">실제 수험생과 함께</div>
-              <div className="text-sm text-gray-500">100일 실험 시작</div>
+              <div className="text-sm text-gray-500">실험 시작</div>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
               <div className="text-2xl font-bold text-primary-600">실제 성적표</div>
