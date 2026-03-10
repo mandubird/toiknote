@@ -138,7 +138,7 @@ const LandingPage = () => {
         <div className="mx-auto max-w-3xl">
           <h2 className="text-center text-2xl font-bold text-gray-900">🎯 D-day 압축 전략 시스템</h2>
           <p className="mt-2 text-center text-sm text-gray-500 whitespace-pre-line">
-            {`시험일 기반 자동 모드 전환\n— 약점 진단 → 핵심 교정 → 압축 관리`}
+            {`시험일 기반 자동 모드 전환\n약점 진단 → 핵심 교정 → 압축 관리`}
           </p>
           <div className="mt-10 space-y-6">
             {[
