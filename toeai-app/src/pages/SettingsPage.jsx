@@ -128,8 +128,9 @@ const SettingsPage = () => {
         rcScore:      rcRaw,
       })
       alert('저장되었어요.')
-    } catch {
-      alert('저장에 실패했어요.')
+    } catch (err) {
+      console.error('[SettingsPage] updateUserProfile error:', err)
+      alert(`저장에 실패했어요.\n${err?.message || JSON.stringify(err)}`)
     } finally {
       setScoreSaving(false)
     }
