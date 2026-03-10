@@ -247,10 +247,6 @@ const LandingPage = () => {
             >
               토답 프리미엄 시작하기 (44,900원)
             </button>
-            <p className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
-              <span>🔒</span>
-              환불 보장 · 점수 상승 없으면 100% 환불
-            </p>
           </div>
         </div>
       </section>
@@ -263,7 +259,6 @@ const LandingPage = () => {
             <span>🎯 AI 전략으로 평균 +58점</span>
             <span>💡 AI 약점 분석</span>
             <span>📊 매주 리포트</span>
-            <span>🔒 환불 보장</span>
           </div>
           <button
             type="button"
