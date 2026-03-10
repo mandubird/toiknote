@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
 import { getSubscription, getFreeLimit, PLAN_LABELS } from '../services/subscription'
 import { getUserProfile, updateUserProfile } from '../services/userProfile'
 import { requestPlanPayment, verifyPortonePayment, PLANS } from '../services/portonePayment'
+import { siteBusinessInfo } from '../config/siteBusinessInfo'
+
+const POLICY_LINKS = [
+  { label: '이용약관',         path: '/terms'          },
+  { label: '개인정보처리방침', path: '/privacy'        },
+  { label: '환불 규정',        path: '/refund-policy'  },
+  { label: '고객문의',         path: '/contact'        },
+]
 
 // 플랜 카드 정의 (30일이 메인)
 const PLAN_CARDS = [
@@ -40,6 +49,7 @@ const PLAN_BENEFITS = [
 
 const SettingsPage = () => {
   const { user, loading, signInWithGoogle, signOut } = useAuth()
+  const navigate = useNavigate()
   const [authError, setAuthError]       = useState(null)
   const [savedCount, setSavedCount]     = useState(0)
   const [subscribed, setSubscribed]     = useState(false)
@@ -407,17 +417,60 @@ const SettingsPage = () => {
         </div>
       )}
 
+      {/* ── 정책 링크 ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+        <h3 className="font-semibold text-gray-900 mb-3">서비스 정책</h3>
+        <div className="divide-y divide-gray-100">
+          {POLICY_LINKS.map(({ label, path }) => (
+            <button
+              key={path}
+              type="button"
+              onClick={() => navigate(path)}
+              className="w-full flex items-center justify-between py-2.5 text-sm text-gray-700 hover:text-primary-600 transition-colors"
+            >
+              <span>{label}</span>
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 사업자 정보 ── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+        <h3 className="font-semibold text-gray-900 mb-3">사업자 정보</h3>
+        <div className="space-y-1.5 text-sm">
+          {[
+            { label: '상호',               value: siteBusinessInfo.businessName      },
+            { label: '대표자',             value: siteBusinessInfo.ceoName           },
+            { label: '사업자등록번호',      value: siteBusinessInfo.businessRegNo     },
+            { label: '통신판매업 신고번호', value: siteBusinessInfo.ecommerceLicenseNo },
+            { label: '이메일',             value: siteBusinessInfo.supportEmail      },
+            { label: '전화',               value: siteBusinessInfo.supportPhone      },
+            { label: '주소',               value: siteBusinessInfo.businessAddress   },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex gap-2">
+              <span className="text-gray-500 w-32 flex-shrink-0">{label}</span>
+              <span className="text-gray-800 break-all">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── 앱 정보 ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <h3 className="font-semibold text-gray-900 mb-3">앱 정보</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-600">버전</span>
-            <span className="text-gray-900">v4.29</span>
+            <span className="text-gray-900">v4.34</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">문의</span>
-            <a href="mailto:support@toeicodap.com" className="text-primary-600">support@toeicodap.com</a>
+            <a href={`mailto:${siteBusinessInfo.supportEmail}`} className="text-primary-600">
+              {siteBusinessInfo.supportEmail}
+            </a>
           </div>
         </div>
       </div>

@@ -1,10 +1,80 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { getSubscription } from '../services/subscription'
 import { analyzeStrategy } from '../services/analyzeStrategy'
+import { getDashboardSummary } from '../services/programService'
 
 const CACHE_MS = 24 * 60 * 60 * 1000
+
+// ── 헬퍼 ──────────────────────────────────────────
+
+function calcDday(examDate) {
+  if (!examDate) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const exam = new Date(examDate)
+  exam.setHours(0, 0, 0, 0)
+  const diff = Math.ceil((exam - today) / (1000 * 60 * 60 * 24))
+  return diff
+}
+
+function getMode(dday) {
+  if (dday === null) return 'unknown'
+  if (dday > 56) return 'normal'
+  if (dday >= 35) return 'compressed'
+  if (dday >= 21) return 'high_compressed'
+  return 'survival'
+}
+
+const MODE_CONFIG = {
+  unknown: {
+    label: '모드 미설정',
+    icon: '📅',
+    bg: 'bg-gray-50',
+    border: 'border-gray-200',
+    text: 'text-gray-700',
+    badge: 'bg-gray-100 text-gray-600',
+    desc: '설정에서 시험일을 입력하면 D-day 압축 모드가 계산돼요.',
+  },
+  normal: {
+    label: '일반 모드',
+    icon: '📘',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-800',
+    badge: 'bg-blue-100 text-blue-700',
+    desc: (n) => `D-${n} — 시험까지 여유가 있어요. 균형 잡힌 약점 교정으로 꾸준히 쌓아가세요.`,
+  },
+  compressed: {
+    label: '압축 모드',
+    icon: '🤖',
+    bg: 'bg-blue-50',
+    border: 'border-blue-300',
+    text: 'text-blue-900',
+    badge: 'bg-blue-200 text-blue-800',
+    desc: (n) => `D-${n} 압축 모드 — 핵심 약점 위주로 집중 공략하세요.`,
+  },
+  high_compressed: {
+    label: '고압축 모드',
+    icon: '⚡',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-orange-900',
+    badge: 'bg-orange-100 text-orange-700',
+    desc: (n) => `D-${n} 고압축 모드 — 시험일까지 가장 손실 큰 약점부터 압축 배치해요.`,
+  },
+  survival: {
+    label: '생존 모드',
+    icon: '🚨',
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    text: 'text-red-900',
+    badge: 'bg-red-100 text-red-700',
+    desc: (n) => `D-${n} 생존 모드 — 핵심 파트 미션만 집중해요. 범위를 줄이고 반복하세요.`,
+  },
+}
 
 function formatLastAnalyzed(iso) {
   if (!iso) return ''
@@ -15,27 +85,34 @@ function formatLastAnalyzed(iso) {
   return `${Math.floor(ms / 86400000)}일 전`
 }
 
+// ── 컴포넌트 ──────────────────────────────────────
+
 const StrategyPage = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [strategy, setStrategy] = useState(null)
+  const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!user) {
       setSubscribed(false)
       setStrategy(null)
+      setDashboard(null)
       setLoading(false)
       return
     }
     const uid = user.id
     Promise.all([
       getSubscription(uid),
+      getDashboardSummary(uid),
       supabase.from('score_analytics').select('*').eq('user_id', uid).maybeSingle(),
-    ]).then(([sub, { data: d }]) => {
+    ]).then(([sub, dash, { data: d }]) => {
       setSubscribed(sub.paid)
+      setDashboard(dash)
       if (sub.paid && d) {
         const lastAt = d.last_analyzed_at ? new Date(d.last_analyzed_at).getTime() : 0
         if (lastAt && Date.now() - lastAt < CACHE_MS) {
@@ -80,133 +157,231 @@ const StrategyPage = () => {
     )
   }
 
-  if (!subscribed) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">AI 추천 학습 전략</h2>
-        <p className="text-sm text-gray-600 mb-4">점수 상승을 위한 맞춤 전략은 프리미엄 회원만 이용할 수 있어요.</p>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
-          <p className="font-medium text-amber-800">전략 분석은 유료 구독 후 이용 가능해요</p>
-          <p className="text-sm text-amber-700 mt-2">일 30개 입력 제한, 세부 분석·AI 전략은 유료 회원만 이용할 수 있어요. 설정에서 구독하기</p>
-        </div>
-      </div>
-    )
-  }
+  // D-day 및 모드 계산
+  const dday = calcDday(dashboard?.examDate)
+  const mode = getMode(dday)
+  const modeConf = MODE_CONFIG[mode]
+  const modeDesc = typeof modeConf.desc === 'function' ? modeConf.desc(dday) : modeConf.desc
+
+  const weakness3 = dashboard?.weakness_top3 ?? []
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">AI 추천 학습 전략</h2>
-      <p className="text-sm text-gray-600 mb-1">나의 약점을 분석한 맞춤 전략이에요</p>
-      <p className="text-xs text-gray-500 mb-4">
-        AI가 당신 데이터를 바탕으로 추천한 학습 방향이에요.
-      </p>
+    <div className="p-4 space-y-4">
 
-      {strategy?.lastAnalyzedAt && (
-        <p className="text-xs text-gray-500 mb-2">
-          마지막 분석: {formatLastAnalyzed(strategy.lastAnalyzedAt)}
+      {/* ── 섹션1: StrategyHero ── */}
+      <div className="mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">D-day 압축 전략</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          약점 진단 → 핵심 약점 교정 → 시험일까지 집중 관리
         </p>
-      )}
-      <button
-        type="button"
-        onClick={handleAnalyze}
-        disabled={analyzing}
-        className="w-full py-3 px-4 rounded-xl bg-primary-600 text-white font-medium mb-6 disabled:opacity-50"
-      >
-        {analyzing ? '분석 중…' : '전략 새로고침'}
-      </button>
+      </div>
 
-      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+      {/* ── 섹션2: 현재 모드 카드 ── */}
+      <div className={`rounded-xl border p-4 ${modeConf.bg} ${modeConf.border}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg">{modeConf.icon}</span>
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${modeConf.badge}`}>
+            {modeConf.label}
+          </span>
+          {dday !== null && (
+            <span className={`text-xs font-medium ${modeConf.text}`}>D-{dday}</span>
+          )}
+        </div>
+        <p className={`text-sm font-medium ${modeConf.text}`}>{modeDesc}</p>
+        {mode === 'unknown' && (
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="mt-3 text-xs font-medium text-primary-600 underline"
+          >
+            설정에서 시험일 입력하기 →
+          </button>
+        )}
+      </div>
 
-      {strategy && (
-        <div className="space-y-4">
-          {strategy.grammarWeaknessSummary && (
-            <div className="bg-amber-50 rounded-lg border border-amber-200 p-4">
-              <p className="text-xs font-medium text-amber-800 mb-1">Part 5 세부 문법 약점</p>
-              <p className="text-amber-900 font-medium">{strategy.grammarWeaknessSummary}</p>
-            </div>
-          )}
-          {strategy.priorityFocus && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-xs font-medium text-gray-500 mb-1">우선 공략 영역</p>
-              <p className="text-gray-900 font-medium">{strategy.priorityFocus}</p>
-            </div>
-          )}
-          {strategy.rcTimeAllocation && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-xs font-medium text-gray-500 mb-2">RC 시간 배분 전략</p>
-              {strategy.rcStrategyText && (
-                <p className="text-sm text-gray-800 mb-3">{strategy.rcStrategyText}</p>
-              )}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700 w-14">Part 5</span>
-                  <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-                    <div
-                      className="h-full bg-primary-500"
-                      style={{ width: `${(strategy.rcTimeAllocation.part5 / 75) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 w-10">{strategy.rcTimeAllocation.part5}분</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700 w-14">Part 6</span>
-                  <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-                    <div
-                      className="h-full bg-primary-400"
-                      style={{ width: `${(strategy.rcTimeAllocation.part6 / 75) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 w-10">{strategy.rcTimeAllocation.part6}분</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700 w-14">Part 7</span>
-                  <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
-                    <div
-                      className="h-full bg-primary-600"
-                      style={{ width: `${(strategy.rcTimeAllocation.part7 / 75) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 w-10">{strategy.rcTimeAllocation.part7}분</span>
+      {/* ── 섹션3: 지금 먼저 고쳐야 할 영역 ── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <h3 className="font-semibold text-gray-900 mb-3">지금 먼저 고쳐야 할 영역</h3>
+        {weakness3.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-3">
+            오답을 10개 이상 등록하면 약점 영역이 분석돼요
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {weakness3.slice(0, 3).map((tag, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-2 bg-red-50 rounded-lg px-3 py-2"
+              >
+                <span className="text-red-500 font-bold text-sm mt-0.5">{i + 1}</span>
+                <div>
+                  <p className="text-sm font-medium text-red-800">{tag}</p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    지금은 이 영역을 먼저 줄이는 게 점수 효율이 높아요
+                  </p>
                 </div>
               </div>
-              {!strategy.rcStrategyText && (
-                <p className="text-xs text-gray-500 mt-2">Part 5·6에서 시간 확보 후 Part 7에 충분히 쓰세요.</p>
-              )}
-            </div>
-          )}
-          {strategy.dailyPlan && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-xs font-medium text-gray-500 mb-1">하루 학습 루틴</p>
-              <p className="text-gray-800 text-sm whitespace-pre-wrap">{strategy.dailyPlan}</p>
-            </div>
-          )}
-          {strategy.weeklyGoal && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-xs font-medium text-gray-500 mb-1">주간 목표</p>
-              <p className="text-gray-800 text-sm">{strategy.weeklyGoal}</p>
-            </div>
-          )}
-          {strategy.expectedImprovement && (
-            <div className="bg-primary-50 rounded-lg border border-primary-100 p-4">
-              <p className="text-xs font-medium text-primary-700 mb-1">예상 개선</p>
-              <p className="text-primary-900 font-medium">{strategy.expectedImprovement}</p>
-            </div>
-          )}
-          {strategy.specificTips && strategy.specificTips.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <p className="text-xs font-medium text-gray-500 mb-2">구체적 팁</p>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-800">
-                {strategy.specificTips.map((tip, i) => (
-                  <li key={i}>{tip}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── 비구독자 안내 ── */}
+      {!subscribed && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+          <p className="text-sm font-medium text-amber-800">
+            AI 집중 블록 분석은 유료 구독 후 이용할 수 있어요
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="mt-2 text-xs font-medium text-amber-700 underline"
+          >
+            설정에서 구독하기 →
+          </button>
         </div>
       )}
 
-      {!strategy && !analyzing && subscribed && (
-        <p className="text-sm text-gray-500 text-center py-8">위 버튼을 눌러 전략을 분석해 보세요</p>
+      {/* ── 구독자 전용: AI 분석 결과 ── */}
+      {subscribed && (
+        <>
+          {/* 분석 버튼 */}
+          <div>
+            {strategy?.lastAnalyzedAt && (
+              <p className="text-xs text-gray-400 mb-1 text-right">
+                마지막 분석: {formatLastAnalyzed(strategy.lastAnalyzedAt)}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={analyzing}
+              className="w-full py-3 px-4 rounded-xl bg-primary-600 text-white font-medium disabled:opacity-50"
+            >
+              {analyzing ? '분석 중…' : strategy ? '전략 새로고침' : '전략 분석 시작'}
+            </button>
+            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+          </div>
+
+          {!strategy && !analyzing && (
+            <p className="text-sm text-gray-400 text-center py-4">
+              위 버튼을 눌러 AI 전략을 분석해 보세요
+            </p>
+          )}
+
+          {strategy && (
+            <div className="space-y-4">
+
+              {/* ── 섹션4: 집중 블록 ── */}
+
+              {/* Part 5 문법 약점 블록 */}
+              {strategy.grammarWeaknessSummary && (
+                <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
+                  <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">
+                    Part 5 문법 교정 블록
+                  </p>
+                  <p className="text-amber-900 text-sm font-medium">{strategy.grammarWeaknessSummary}</p>
+                </div>
+              )}
+
+              {/* 핵심 약점 교정 블록 */}
+              {strategy.priorityFocus && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                    핵심 약점 교정 블록
+                  </p>
+                  <p className="text-gray-900 text-sm font-medium">{strategy.priorityFocus}</p>
+                </div>
+              )}
+
+              {/* RC 시간 압축 블록 */}
+              {strategy.rcTimeAllocation && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                    RC 시간 손실 압축 블록
+                  </p>
+                  {strategy.rcStrategyText && (
+                    <p className="text-sm text-gray-800 mb-3">{strategy.rcStrategyText}</p>
+                  )}
+                  <div className="space-y-2">
+                    {[
+                      { label: 'Part 5', key: 'part5', color: 'bg-primary-500' },
+                      { label: 'Part 6', key: 'part6', color: 'bg-primary-400' },
+                      { label: 'Part 7', key: 'part7', color: 'bg-primary-600' },
+                    ].map(({ label, key, color }) => (
+                      <div key={key} className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700 w-14">{label}</span>
+                        <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+                          <div
+                            className={`h-full ${color}`}
+                            style={{ width: `${((strategy.rcTimeAllocation[key] || 0) / 75) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900 w-10">
+                          {strategy.rcTimeAllocation[key]}분
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {!strategy.rcStrategyText && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Part 5·6에서 시간 확보 후 Part 7에 충분히 배분하세요.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 학습 루틴 블록 */}
+              {strategy.dailyPlan && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                    학습 루틴 블록
+                  </p>
+                  <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">
+                    {strategy.dailyPlan}
+                  </p>
+                </div>
+              )}
+
+              {/* 실전 팁 */}
+              {strategy.specificTips && strategy.specificTips.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                    실전 핵심 팁
+                  </p>
+                  <ul className="space-y-2">
+                    {strategy.specificTips.map((tip, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
+                        <span className="text-primary-400 mt-0.5 flex-shrink-0">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 예상 개선 */}
+              {strategy.expectedImprovement && (
+                <div className="bg-primary-50 rounded-xl border border-primary-100 p-4">
+                  <p className="text-xs font-bold text-primary-600 uppercase tracking-wide mb-1">
+                    예상 점수 개선
+                  </p>
+                  <p className="text-primary-900 text-sm font-medium">{strategy.expectedImprovement}</p>
+                </div>
+              )}
+
+              {/* ── 섹션5: AI 코치 한 줄 ── */}
+              {strategy.weeklyGoal && (
+                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg flex-shrink-0">💬</span>
+                    <p className="text-sm text-gray-700 leading-relaxed">{strategy.weeklyGoal}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
