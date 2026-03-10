@@ -218,12 +218,7 @@ const LandingPage = () => {
           <h2 className="text-center text-2xl font-bold text-gray-900">💰 토답 프리미엄</h2>
           <div className="mt-8 rounded-2xl border-2 border-primary-200 bg-white p-6 shadow-lg">
             <div className="text-center">
-              <p className="text-sm text-gray-500">정가: 49,900원</p>
-              <p className="mt-1">
-                <span className="rounded bg-amber-200 px-2 py-0.5 text-xs font-medium">1기 한정</span>
-                <span className="ml-2 text-2xl font-bold text-gray-900">44,900원</span>
-              </p>
-              <p className="text-sm font-medium text-green-600">5,000원 할인</p>
+              <p className="text-2xl font-bold text-gray-900">49,900원</p>
             </div>
             <ul className="mt-6 space-y-2 text-sm text-gray-700">
               {[
@@ -245,7 +240,7 @@ const LandingPage = () => {
               onClick={() => navigate('/settings')}
               className="mt-6 w-full rounded-xl bg-amber-400 py-4 text-lg font-bold text-gray-900 hover:bg-amber-300"
             >
-              토답 프리미엄 시작하기 (44,900원)
+              토답 프리미엄 시작하기 (49,900원)
             </button>
           </div>
         </div>
@@ -265,7 +260,7 @@ const LandingPage = () => {
             onClick={() => navigate(user ? '/dashboard' : '/settings')}
             className="mt-8 rounded-xl bg-primary-600 px-10 py-4 text-lg font-bold text-white hover:bg-primary-700"
           >
-            지금 시작하기 (44,900원)
+            지금 시작하기 (49,900원)
           </button>
           <p className="mt-3 text-sm text-gray-500">결제 후 즉시 프로그램 시작 가능</p>
         </div>
