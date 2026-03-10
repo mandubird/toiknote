@@ -233,15 +233,31 @@ const DashboardPage = () => {
             <div className="flex justify-between gap-4">
               <div>
                 <p className="text-xs text-gray-500">현재 예상 점수</p>
-                <p className="text-lg font-bold text-primary-700">
-                  {data.predicted_score != null ? `${data.predicted_score}점` : '미입력'}
-                </p>
+                {data.predicted_score != null ? (
+                  <p className="text-lg font-bold text-primary-700">{data.predicted_score}점</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings')}
+                    className="flex items-center gap-1 mt-0.5 text-sm font-semibold text-primary-600 bg-primary-100 hover:bg-primary-200 active:scale-95 transition px-2.5 py-1 rounded-lg"
+                  >
+                    점수 입력하기 →
+                  </button>
+                )}
               </div>
               <div>
                 <p className="text-xs text-gray-500">목표 점수</p>
-                <p className="text-lg font-bold text-gray-800">
-                  {data.target_score != null ? `${data.target_score}점` : '-'}
-                </p>
+                {data.target_score != null ? (
+                  <p className="text-lg font-bold text-gray-800">{data.target_score}점</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings')}
+                    className="flex items-center gap-1 mt-0.5 text-sm font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 active:scale-95 transition px-2.5 py-1 rounded-lg"
+                  >
+                    입력하기 →
+                  </button>
+                )}
               </div>
             </div>
           </div>
