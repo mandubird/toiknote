@@ -132,6 +132,9 @@ const StrategyPage = () => {
         }
       }
       setLoading(false)
+    }).catch((err) => {
+      console.error('[StrategyPage] init error:', err)
+      setLoading(false)
     })
   }, [user])
 
