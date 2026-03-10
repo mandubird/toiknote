@@ -4,5 +4,5 @@
 export const CTA = {
   FREE_DIAGNOSIS: '무료 점수 진단 시작',
   VIEW_RESULT: '결과 보기',
-  START_PROGRAM: '100일 프로젝트 시작하기',
+  START_PROGRAM: '토답 프리미엄 시작하기',
 }

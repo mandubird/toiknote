@@ -215,22 +215,22 @@ const LandingPage = () => {
       {/* 가격 */}
       <section id="pricing" className="border-t border-gray-100 bg-primary-50 px-4 py-16">
         <div className="mx-auto max-w-lg">
-          <h2 className="text-center text-2xl font-bold text-gray-900">💰 100일 프로젝트</h2>
+          <h2 className="text-center text-2xl font-bold text-gray-900">💰 토답 프리미엄</h2>
           <div className="mt-8 rounded-2xl border-2 border-primary-200 bg-white p-6 shadow-lg">
             <div className="text-center">
-              <p className="text-sm text-gray-500">정가: 129,000원</p>
+              <p className="text-sm text-gray-500">정가: 49,900원</p>
               <p className="mt-1">
                 <span className="rounded bg-amber-200 px-2 py-0.5 text-xs font-medium">1기 한정</span>
-                <span className="ml-2 text-2xl font-bold text-gray-900">99,000원</span>
+                <span className="ml-2 text-2xl font-bold text-gray-900">44,900원</span>
               </p>
-              <p className="text-sm font-medium text-green-600">30,000원 할인</p>
+              <p className="text-sm font-medium text-green-600">5,000원 할인</p>
             </div>
             <ul className="mt-6 space-y-2 text-sm text-gray-700">
               {[
                 'AI 점수 예측 (매일 업데이트)',
                 '주간 리포트 자동 생성 (시험일까지)',
                 '약점 집중 루틴 (개인 맞춤)',
-                '시험일 D-day 맞춤 관리 (최대 100일)',
+                '시험일 D-day 맞춤 관리',
                 '진행률 대시보드',
                 '점수 상승 추적 그래프',
               ].map((item) => (
@@ -245,11 +245,11 @@ const LandingPage = () => {
               onClick={() => navigate('/settings')}
               className="mt-6 w-full rounded-xl bg-amber-400 py-4 text-lg font-bold text-gray-900 hover:bg-amber-300"
             >
-              100일 프로젝트 시작하기 (99,000원)
+              토답 프리미엄 시작하기 (44,900원)
             </button>
             <p className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
               <span>🔒</span>
-              100일 환불 보장 · 점수 상승 없으면 100% 환불
+              환불 보장 · 점수 상승 없으면 100% 환불
             </p>
           </div>
         </div>
@@ -260,17 +260,17 @@ const LandingPage = () => {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold text-gray-900">900점, 이번엔 달성하세요</h2>
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-gray-600">
-            <span>🎯 100일 집중으로 평균 +58점</span>
+            <span>🎯 AI 전략으로 평균 +58점</span>
             <span>💡 AI 약점 분석</span>
             <span>📊 매주 리포트</span>
-            <span>🔒 100일 환불 보장</span>
+            <span>🔒 환불 보장</span>
           </div>
           <button
             type="button"
             onClick={() => navigate(user ? '/dashboard' : '/settings')}
             className="mt-8 rounded-xl bg-primary-600 px-10 py-4 text-lg font-bold text-white hover:bg-primary-700"
           >
-            지금 시작하기 (99,000원)
+            지금 시작하기 (44,900원)
           </button>
           <p className="mt-3 text-sm text-gray-500">결제 후 즉시 프로그램 시작 가능</p>
         </div>
