@@ -118,12 +118,11 @@ const Layout = () => {
   }, [user?.id, refCode])
 
   const tabs = [
-    { path: '/', label: '홈', icon: HomeIcon },
+    { path: '/',          label: '홈',     icon: HomeIcon      },
     { path: '/dashboard', label: '대시보드', icon: DashboardIcon },
-    { path: '/stats', label: '통계', icon: StatsIcon },
-    { path: '/strategy', label: '전략', icon: StrategyIcon },
-    { path: '/program', label: '100일', icon: ProgramIcon },
-    { path: '/settings', label: '설정', icon: SettingsIcon }
+    { path: '/stats',     label: '약점',   icon: WeaknessIcon  },
+    { path: '/strategy',  label: '전략',   icon: StrategyIcon  },
+    { path: '/settings',  label: '설정',   icon: SettingsIcon  },
   ]
 
   return (
@@ -207,7 +206,7 @@ const Layout = () => {
 
       {/* 하단 탭바 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom">
-        <div className="grid grid-cols-6 h-16">
+        <div className="grid grid-cols-5 h-16">
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = location.pathname === tab.path || (tab.path === '/dashboard' && (location.pathname.startsWith('/week') || location.pathname.startsWith('/report')))
@@ -244,9 +243,12 @@ const DashboardIcon = ({ className }) => (
   </svg>
 )
 
-const StatsIcon = ({ className }) => (
+// 약점 탭 아이콘 — 타겟(과녁) 형태
+const WeaknessIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    <circle cx="12" cy="12" r="9" strokeWidth={2} />
+    <circle cx="12" cy="12" r="5" strokeWidth={2} />
+    <circle cx="12" cy="12" r="1" strokeWidth={2} />
   </svg>
 )
 
@@ -256,11 +258,6 @@ const StrategyIcon = ({ className }) => (
   </svg>
 )
 
-const ProgramIcon = ({ className }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-  </svg>
-)
 
 const SettingsIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -12,7 +12,7 @@ const CHART_COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8', '#1
 
 const StatsPage = () => {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('stats')
+  const [activeTab, setActiveTab] = useState('mastery')
   const [tagStats, setTagStats] = useState(null)
   const [segmentStats, setSegmentStats] = useState(null)
   const [subscribed, setSubscribed] = useState(false)
@@ -79,7 +79,7 @@ const StatsPage = () => {
     <div className="p-4">
       {/* 탭 */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#F3F4F6', borderRadius: 12, padding: 4 }}>
-        {[{ key: 'stats', label: '통계' }, { key: 'mastery', label: '약점 체크리스트' }].map((tab) => (
+        {[{ key: 'mastery', label: '약점' }, { key: 'stats', label: '통계' }].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
