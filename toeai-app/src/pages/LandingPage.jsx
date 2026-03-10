@@ -133,36 +133,53 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* 프로그램 구조 */}
+      {/* D-day 압축 전략 시스템 */}
       <section className="border-t border-gray-100 bg-gray-50 px-4 py-16">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-2xl font-bold text-gray-900">📚 100일 집중 관리 시스템</h2>
-          <p className="mt-2 text-center text-sm text-gray-500">핵심 8주 훈련 + 시험일까지 유지·압축 관리</p>
+          <h2 className="text-center text-2xl font-bold text-gray-900">🎯 D-day 압축 전략 시스템</h2>
+          <p className="mt-2 text-center text-sm text-gray-500">시험일 기반 자동 모드 전환 — 약점 진단 → 핵심 교정 → 압축 관리</p>
           <div className="mt-10 space-y-6">
             {[
-              { badge: 'Week 1-2', title: 'RC 구조 교정', desc: 'Part 5 고난도 문법 + Part 7 단일지문 속도', accent: false },
-              { badge: 'Week 3-4', title: 'Part 7 시간 단축', desc: '복수지문 구조 파악 + 시간 압박 훈련', accent: false },
-              { badge: 'Week 5-6', title: 'LC 보정', desc: 'Part 2 우회답변 + Part 3 세부정보', accent: false },
-              { badge: 'Week 7-8', title: '실전 시뮬레이션', desc: '실수 제로 훈련 + 900 돌파 마지막 점검', accent: false },
-              { badge: 'Day 57-100', title: '시험일까지 유지 관리', desc: '약점 복습 + 실전 감각 유지 + D-day 압축 플랜', accent: true },
+              {
+                badge: 'D-57일+',
+                label: '일반 모드',
+                title: 'RC·LC 균형 교정',
+                desc: 'AI가 진단한 약점 태그를 균형 있게 교정하며 점수 기반을 쌓아요.',
+                color: 'border-blue-200 bg-blue-50',
+                badgeColor: 'bg-blue-100 text-blue-700',
+              },
+              {
+                badge: 'D-35~56',
+                label: '압축 모드',
+                title: '핵심 약점 집중 공략',
+                desc: '점수 손실이 큰 상위 약점만 골라 집중 공략 모드로 전환해요.',
+                color: 'border-amber-200 bg-amber-50',
+                badgeColor: 'bg-amber-100 text-amber-700',
+              },
+              {
+                badge: 'D-21~34',
+                label: '고압축 모드',
+                title: '손실 큰 약점 압축 배치',
+                desc: '시험일이 다가올수록 배율이 높은 약점부터 압축 배치해 점수를 끌어올려요.',
+                color: 'border-orange-200 bg-orange-50',
+                badgeColor: 'bg-orange-100 text-orange-700',
+              },
+              {
+                badge: 'D-20 이내',
+                label: '생존 모드',
+                title: '핵심 파트 미션만 집중',
+                desc: '새 학습 없이 핵심 파트 미션·실전 감각 유지에만 집중해 점수를 지켜요.',
+                color: 'border-red-200 bg-red-50',
+                badgeColor: 'bg-red-100 text-red-700',
+              },
             ].map((block) => (
-              <div
-                key={block.badge}
-                className={`rounded-xl border p-5 ${
-                  block.accent
-                    ? 'border-emerald-200 bg-emerald-50'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                <span
-                  className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${
-                    block.accent
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-primary-100 text-primary-700'
-                  }`}
-                >
-                  {block.badge}
-                </span>
+              <div key={block.badge} className={`rounded-xl border p-5 ${block.color}`}>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${block.badgeColor}`}>
+                    {block.badge}
+                  </span>
+                  <span className="text-xs text-gray-500">{block.label}</span>
+                </div>
                 <h3 className="mt-2 font-semibold text-gray-900">{block.title}</h3>
                 <p className="mt-1 text-sm text-gray-600">{block.desc}</p>
               </div>

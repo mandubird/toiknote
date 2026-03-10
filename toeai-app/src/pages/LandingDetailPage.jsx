@@ -175,7 +175,7 @@ export default function LandingDetailPage() {
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
               <li>✓ AI 약점 분석 + 점수 예측</li>
               <li>✓ 주간 맞춤 전략 리포트</li>
-              <li>✓ 100일 집중 관리 시스템</li>
+              <li>✓ D-day 압축 전략 시스템</li>
             </ul>
             <div className="mt-6">
               <CtaButton type="START_PROGRAM" position="pricing" size="large" />
