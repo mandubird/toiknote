@@ -6,6 +6,8 @@ import { getSubscription, getFreeLimit, PLAN_LABELS } from '../services/subscrip
 import { getUserProfile, updateUserProfile } from '../services/userProfile'
 import { requestPlanPayment, verifyPortonePayment, PLANS } from '../services/portonePayment'
 import { siteBusinessInfo } from '../config/siteBusinessInfo'
+import { updateExamDate } from '../services/programService'
+import { supabase } from '../lib/supabase'
 
 const POLICY_LINKS = [
   { label: '이용약관',         path: '/terms'          },
@@ -59,6 +61,8 @@ const SettingsPage = () => {
   const [targetScore, setTargetScore]   = useState('900')
   const [lcScore, setLcScore]           = useState('')
   const [rcScore, setRcScore]           = useState('')
+  const [examDate, setExamDate]         = useState('')
+  const [examSaving, setExamSaving]     = useState(false)
   const [scoreSaving, setScoreSaving]   = useState(false)
   const [paymentLoading, setPaymentLoading] = useState(null)
   const [paymentError, setPaymentError]     = useState(null)
@@ -77,13 +81,15 @@ const SettingsPage = () => {
       setTargetScore('900')
       setLcScore('')
       setRcScore('')
+      setExamDate('')
       return
     }
     Promise.all([
       fetchWrongAnswers(user.id),
       getSubscription(user.id),
       getUserProfile(user.id),
-    ]).then(([list, sub, profile]) => {
+      supabase.from('users').select('exam_date').eq('id', user.id).maybeSingle(),
+    ]).then(([list, sub, profile, { data: userRow }]) => {
       setSavedCount(list.length)
       setSubscribed(sub.paid)
       setPlan(sub.plan || 'free')
@@ -92,6 +98,7 @@ const SettingsPage = () => {
       setTargetScore(profile.targetScore  ? String(profile.targetScore)  : '900')
       setLcScore(profile.lcScore != null ? String(profile.lcScore) : '')
       setRcScore(profile.rcScore != null ? String(profile.rcScore) : '')
+      setExamDate(userRow?.exam_date ?? '')
     })
   }, [user])
 
@@ -166,6 +173,20 @@ const SettingsPage = () => {
       setPaymentError(err?.message || '결제 요청에 실패했어요.')
     } finally {
       setPaymentLoading(null)
+    }
+  }
+
+  const handleSaveExamDate = async () => {
+    if (!user || !examDate) return
+    setExamSaving(true)
+    try {
+      await updateExamDate(user.id, examDate)
+      alert('시험일이 저장되었어요.')
+    } catch (err) {
+      console.error('[SettingsPage] updateExamDate error:', err)
+      alert(`저장에 실패했어요.\n${err?.message || JSON.stringify(err)}`)
+    } finally {
+      setExamSaving(false)
     }
   }
 
@@ -274,6 +295,29 @@ const SettingsPage = () => {
             className="w-full py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
           >
             {scoreSaving ? '저장 중…' : '저장'}
+          </button>
+        </div>
+      )}
+
+      {/* ── 시험일 ── */}
+      {user && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+          <h3 className="font-semibold text-gray-900 mb-1">시험일</h3>
+          <p className="text-xs text-gray-500 mb-3">입력하면 D-day 압축 전략 모드가 자동으로 계산돼요</p>
+          <input
+            type="date"
+            value={examDate}
+            min={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setExamDate(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
+          />
+          <button
+            type="button"
+            onClick={handleSaveExamDate}
+            disabled={examSaving || !examDate}
+            className="w-full py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+          >
+            {examSaving ? '저장 중…' : '시험일 저장'}
           </button>
         </div>
       )}
