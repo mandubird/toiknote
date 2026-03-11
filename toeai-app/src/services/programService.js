@@ -389,8 +389,12 @@ export async function getDashboardSummary(userId) {
   let daysElapsed = 0
   if (plan?.programStartDate) {
     const start = new Date(plan.programStartDate)
-    const end = plan.programEndDate ? new Date(plan.programEndDate) : new Date()
-    daysElapsed = Math.min(DAYS_TOTAL, Math.max(0, Math.floor((end - start) / (24 * 60 * 60 * 1000))))
+    const today = new Date()
+    // 오늘까지 경과일 (programEndDate 초과 시 cap)
+    const cappedToday = plan.programEndDate
+      ? new Date(Math.min(today.getTime(), new Date(plan.programEndDate).getTime()))
+      : today
+    daysElapsed = Math.min(DAYS_TOTAL, Math.max(0, Math.floor((cappedToday - start) / (24 * 60 * 60 * 1000))))
   }
 
   const totalWrong = tagStats?.totalWrong || 1
