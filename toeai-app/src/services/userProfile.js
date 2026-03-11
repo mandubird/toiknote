@@ -1,16 +1,36 @@
 import { supabase } from '../lib/supabase'
 
+/** lc_score/rc_score 컬럼이 schema cache에 없는지 판별 */
+function isScoreColumnMissing(error) {
+  if (!error) return false
+  const msg = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+  return msg.includes('lc_score') || msg.includes('rc_score')
+}
+
 /**
  * @param {string} userId
  * @returns {Promise<{ currentScore: number, targetScore: number, lcScore: number|null, rcScore: number|null, usageCount: number }>}
  */
 export async function getUserProfile(userId) {
   if (!userId) return { currentScore: 0, targetScore: 900, lcScore: null, rcScore: null, usageCount: 0 }
-  const { data, error } = await supabase
+
+  // lc_score/rc_score 포함해서 먼저 시도
+  let { data, error } = await supabase
     .from('users')
     .select('current_score, target_score, lc_score, rc_score, usage_count')
     .eq('id', userId)
     .maybeSingle()
+
+  // 컬럼 없으면 컬럼 제외 후 재시도
+  if (error && isScoreColumnMissing(error)) {
+    console.warn('[getUserProfile] lc_score/rc_score 컬럼 없음, 컬럼 제외 재시도');
+    ({ data, error } = await supabase
+      .from('users')
+      .select('current_score, target_score, usage_count')
+      .eq('id', userId)
+      .maybeSingle())
+  }
+
   if (error) {
     console.error('getUserProfile', error)
     return { currentScore: 0, targetScore: 900, lcScore: null, rcScore: null, usageCount: 0 }
@@ -42,6 +62,7 @@ export async function updateUserProfile(userId, data) {
   const lc = lcVal != null && lcVal >= 5 && lcVal <= 495 ? lcVal : null
   const rc = rcVal != null && rcVal >= 5 && rcVal <= 495 ? rcVal : null
 
+  // lc_score/rc_score 포함해서 먼저 시도
   const { error } = await supabase.from('users').upsert(
     {
       id:            userId,
@@ -53,5 +74,22 @@ export async function updateUserProfile(userId, data) {
     },
     { onConflict: 'id' }
   )
+
+  // 컬럼 없으면 lc_score/rc_score 제외 후 재시도 (마이그레이션 전 방어)
+  if (error && isScoreColumnMissing(error)) {
+    console.warn('[updateUserProfile] lc_score/rc_score 컬럼 없음, 컬럼 제외 재시도')
+    const { error: error2 } = await supabase.from('users').upsert(
+      {
+        id:            userId,
+        current_score: current,
+        target_score:  target,
+        last_updated:  new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    )
+    if (error2) throw error2
+    return
+  }
+
   if (error) throw error
 }
