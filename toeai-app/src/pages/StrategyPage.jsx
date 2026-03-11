@@ -211,14 +211,19 @@ const StrategyPage = () => {
           </p>
         ) : (
           <div className="space-y-2">
-            {weakness3.slice(0, 3).map((tag, i) => (
+            {weakness3.slice(0, 3).map((item, i) => (
               <div
                 key={i}
                 className="flex items-start gap-2 bg-red-50 rounded-lg px-3 py-2"
               >
                 <span className="text-red-500 font-bold text-sm mt-0.5">{i + 1}</span>
                 <div>
-                  <p className="text-sm font-medium text-red-800">{tag}</p>
+                  <p className="text-sm font-medium text-red-800">
+                    {typeof item === 'string' ? item : item.tag}
+                    {typeof item === 'object' && item.count > 0 && (
+                      <span className="ml-1 text-xs text-red-400">({item.count}개)</span>
+                    )}
+                  </p>
                   <p className="text-xs text-red-600 mt-0.5">
                     지금은 이 영역을 먼저 줄이는 게 점수 효율이 높아요
                   </p>
