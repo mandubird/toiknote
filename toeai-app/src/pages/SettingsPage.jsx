@@ -304,21 +304,23 @@ const SettingsPage = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
           <h3 className="font-semibold text-gray-900 mb-1">시험일</h3>
           <p className="text-xs text-gray-500 mb-3">입력하면 D-day 압축 전략 모드가 자동으로 계산돼요</p>
-          <input
-            type="date"
-            value={examDate}
-            min={new Date().toISOString().split('T')[0]}
-            onChange={(e) => setExamDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"
-          />
-          <button
-            type="button"
-            onClick={handleSaveExamDate}
-            disabled={examSaving || !examDate}
-            className="w-full py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-          >
-            {examSaving ? '저장 중…' : '시험일 저장'}
-          </button>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={examDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setExamDate(e.target.value)}
+              className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleSaveExamDate}
+              disabled={examSaving || !examDate}
+              className="shrink-0 py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+            >
+              {examSaving ? '저장 중…' : '저장'}
+            </button>
+          </div>
         </div>
       )}
 
