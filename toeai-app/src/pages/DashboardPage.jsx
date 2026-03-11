@@ -273,20 +273,29 @@ const DashboardPage = () => {
           {/* #8 ScoreBandStrategyCard */}
           <ScoreBandStrategyCard currentScore={data.current_score} />
 
-          {/* 이번 주 미션 카드 */}
+          {/* 오늘의 집중 미션 카드 */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded">Week {data.current_week}</span>
+              <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded">오늘의 집중 미션</span>
               <button
                 type="button"
-                onClick={() => navigate('/program')}
+                onClick={() => navigate('/strategy')}
                 className="text-sm text-primary-600 font-medium"
               >
-                상세 →
+                전략 보기 →
               </button>
             </div>
-            <h3 className="text-sm font-medium text-gray-700 mb-2">이번 주 목표</h3>
-            <p className="text-gray-800 mb-4">{data.weekly_mission ?? '-'}</p>
+            {data.weakness_top3?.length > 0 ? (
+              <p className="text-gray-800 mb-4 font-medium">
+                {typeof data.weakness_top3[0] === 'string'
+                  ? data.weakness_top3[0]
+                  : data.weakness_top3[0].tag} 집중 공략
+              </p>
+            ) : data.weekly_mission ? (
+              <p className="text-gray-800 mb-4">{data.weekly_mission}</p>
+            ) : (
+              <p className="text-sm text-gray-400 mb-4">오답을 등록하면 오늘의 미션이 생성돼요</p>
+            )}
             <button
               type="button"
               onClick={() => navigate('/program')}
@@ -336,7 +345,7 @@ const DashboardPage = () => {
                 </LineChart>
               </ResponsiveContainer>
               <p className="text-xs text-gray-500 mt-2">
-                Week {data.current_week}: {data.predicted_score != null ? `${data.predicted_score}점` : '-'}
+                현재 예상 점수: {data.predicted_score != null ? `${data.predicted_score}점` : '-'}
                 {data.accuracy_change != null && data.accuracy_change > 0 && (
                   <span className="text-green-600 ml-1">(+{data.accuracy_change}%) ↗️</span>
                 )}
