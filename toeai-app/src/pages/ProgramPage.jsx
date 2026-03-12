@@ -220,10 +220,12 @@ const ProgramPage = () => {
 
   return (
     <div className="p-4 pb-8">
-      <h2 className="text-lg font-bold text-gray-800 mb-1">100일 프로젝트</h2>
-      <p className="text-sm text-gray-500 mb-4">
-        시험일 입력 후 Week1부터 순차 진행해요. (무료: Week2까지 / Pro: Week8·PDF·점수예측)
-      </p>
+      <h2 className="text-lg font-bold text-gray-800 mb-1">시험일 기준 전략 플랜</h2>
+      {(!plan || plan?.status === 'none') && (
+        <p className="text-sm text-gray-500 mb-4">
+          시험일을 입력하면 AI가 맞춤 플랜을 만들어줘요.
+        </p>
+      )}
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>
@@ -232,7 +234,7 @@ const ProgramPage = () => {
       {plan?.status === 'none' && !diagnosticDone && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <p className="text-gray-700 mb-4">
-            <strong>진단 완료 전에는 Week1에 접근할 수 없어요.</strong> 먼저 정밀 진단을 진행해 주세요.
+            <strong>진단을 완료해야 전략 플랜이 시작돼요.</strong> 먼저 정밀 진단을 진행해 주세요.
           </p>
           <button
             type="button"
@@ -376,21 +378,30 @@ const ProgramPage = () => {
             </div>
           )}
 
-          {freeLimitReached && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-              Week3부터는 <strong>Pro 구독</strong>이 필요해요. 설정에서 업그레이드할 수 있어요.
-            </div>
-          )}
           {showScorePrediction && (
             <div className="mb-4 p-3 bg-primary-50 rounded-lg border border-primary-100">
-              <p className="text-xs text-primary-600 font-medium">점수 예측 (Week4+)</p>
+              <p className="text-xs text-primary-600 font-medium">점수 예측</p>
               <p className="text-lg font-bold text-primary-700">{scorePrediction.predicted_score}점</p>
               {scorePrediction.confidence_rate != null && (
                 <p className="text-xs text-gray-600">신뢰도 약 {Math.round(scorePrediction.confidence_rate)}%</p>
               )}
             </div>
           )}
-          {/* 현재 진행 카드 — 압축/일반 모드 자동 전환 */}
+          {freeLimitReached ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-4 text-center">
+              <p className="text-base font-bold text-amber-800 mb-1">전체 플랜은 Pro 전용이에요</p>
+              <p className="text-sm text-amber-700 mb-4">
+                Pro로 업그레이드하면 전체 전략 플랜 + PDF 리포트 + 점수 예측까지 이용할 수 있어요.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="w-full py-3 bg-amber-500 text-white font-medium rounded-lg hover:bg-amber-600 active:scale-95 transition"
+              >
+                Pro로 업그레이드하기
+              </button>
+            </div>
+          ) : (
           <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
             {compressedBlocks && currentBlock ? (
               /* ── 압축 모드 ── */
@@ -400,7 +411,7 @@ const ProgramPage = () => {
                     <p className="text-xs text-gray-500 mb-0.5">현재 집중 블록</p>
                     <p className="text-lg font-bold text-primary-600">{currentBlock.label}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {currentBlock.week_label} · {currentBlock.duration_days}일 집중
+                      {currentBlock.duration_days}일 집중 구간
                     </p>
                   </div>
                   <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full font-medium shrink-0">
@@ -456,14 +467,12 @@ const ProgramPage = () => {
                 )}
               </>
             ) : (
-              /* ── 일반 모드 (week 표시) ── */
+              /* ── 일반 모드 ── */
               <>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm text-gray-500">현재 주차</span>
-                  <span className="text-lg font-bold text-primary-600">
-                    {plan.currentWeek}주차{' '}
-                    {plan.status === 'expired' && '(종료)'}
-                    {plan.status === 'completed' && '(완료)'}
+                  <span className="text-sm text-gray-500">현재 플랜</span>
+                  <span className="text-sm font-medium text-primary-600">
+                    {plan.status === 'expired' ? '종료' : plan.status === 'completed' ? '완료' : '진행 중'}
                   </span>
                 </div>
                 {currentPlan && (
@@ -491,10 +500,11 @@ const ProgramPage = () => {
                 disabled={advancing}
                 className="mt-3 w-full py-2 border border-primary-600 text-primary-600 font-medium rounded-lg disabled:opacity-50"
               >
-                {advancing ? '진행 중…' : compressedBlocks ? '이 구간 완료하고 다음으로' : '이 주 완료하고 다음 주로'}
+                {advancing ? '진행 중…' : '이 구간 완료하고 다음으로'}
               </button>
             )}
           </div>
+          )}
 
           {reports.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -505,7 +515,7 @@ const ProgramPage = () => {
                 {reports.map((r) => (
                   <li key={r.id} className="px-4 py-3">
                     <div className="flex justify-between items-start">
-                      <span className="font-medium text-gray-700">{r.week}주차</span>
+                      <span className="font-medium text-gray-700">구간 {r.week}</span>
                       <span className="flex items-center gap-2">
                         <span className="text-sm text-primary-600">
                           {r.estimated_score_end != null && `예상 ${r.estimated_score_end}점`}
