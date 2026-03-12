@@ -1,9 +1,58 @@
 import { supabase } from '../lib/supabase'
 
 const FREE_LIMIT = 5
+const FREE_TRIAL_DAYS = 7
 
 export function getFreeLimit() {
   return FREE_LIMIT
+}
+
+export function getFreeTrialDays() {
+  return FREE_TRIAL_DAYS
+}
+
+/**
+ * 무료 체험 상태 조회
+ * 첫 오답 등록 시점부터 7일, 최대 5문제
+ * @param {string} userId
+ * @returns {Promise<{ inTrial: boolean, questionsUsed: number, questionsLeft: number, daysLeft: number, trialExpired: boolean, trialStartedAt: Date|null }>}
+ */
+export async function getTrialStatus(userId) {
+  const empty = { inTrial: false, questionsUsed: 0, questionsLeft: FREE_LIMIT, daysLeft: 0, trialExpired: false, trialStartedAt: null }
+  if (!userId) return empty
+
+  const { data, error } = await supabase
+    .from('wrong_answers')
+    .select('created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getTrialStatus', error)
+    return empty
+  }
+
+  const questionsUsed = data?.length ?? 0
+  const questionsLeft = Math.max(0, FREE_LIMIT - questionsUsed)
+
+  // 오답이 없으면 체험 시작 전 (아직 7일 풀로 남음)
+  if (questionsUsed === 0) {
+    return { inTrial: true, questionsUsed: 0, questionsLeft: FREE_LIMIT, daysLeft: FREE_TRIAL_DAYS, trialExpired: false, trialStartedAt: null }
+  }
+
+  // 첫 오답 등록 시점부터 7일 계산
+  const trialStartedAt = new Date(data[0].created_at)
+  const trialEndsAt = new Date(trialStartedAt)
+  trialEndsAt.setDate(trialEndsAt.getDate() + FREE_TRIAL_DAYS)
+
+  const now = new Date()
+  const daysLeft = Math.max(0, Math.ceil((trialEndsAt - now) / (1000 * 60 * 60 * 24)))
+
+  const timeExpired = daysLeft === 0
+  const questionExpired = questionsLeft === 0
+  const trialExpired = timeExpired || questionExpired
+
+  return { inTrial: !trialExpired, questionsUsed, questionsLeft, daysLeft, trialExpired, trialStartedAt }
 }
 
 /**

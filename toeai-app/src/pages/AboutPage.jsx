@@ -29,7 +29,7 @@ export default function AboutPage() {
           { icon: '📸', title: '오답 사진 업로드', desc: '카메라 한 장으로 AI가 유형·파트·태그 자동 분류' },
           { icon: '🔍', title: '약점 진단', desc: '오답 패턴 분석으로 핵심 약점 자동 도출' },
           { icon: '📅', title: 'D-day 압축 전략', desc: '시험일까지 남은 기간에 맞춘 학습 우선순위 제안' },
-          { icon: '🤖', title: 'AI 코치', desc: '주간 리포트 기반 4블록 맞춤 코칭 멘트' },
+          { icon: '🤖', title: 'AI 코치', desc: 'D-day 기반 4블록 맞춤 코칭 멘트 제공' },
         ].map((item) => (
           <div key={item.title} style={{
             background: '#F9FAFB', borderRadius: 12, padding: '16px 14px',

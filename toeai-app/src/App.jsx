@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { RefreshListProvider } from './contexts/RefreshListContext'
+import { getSubscription } from './services/subscription'
 import Layout from './components/Layout'
 import HomePage from './pages/HomePage'
 import StatsPage from './pages/StatsPage'
@@ -29,6 +31,33 @@ import ContactPage from './pages/ContactPage'
 import FaqPage from './pages/FaqPage'
 import AboutPage from './pages/AboutPage'
 
+/** "/" 진입 분기: 비로그인/미결제 → 랜딩, 유료 → 앱 홈 */
+function HomeOrLanding() {
+  const { user, loading: authLoading } = useAuth()
+  const [checking, setChecking] = useState(true)
+  const [paid, setPaid] = useState(false)
+
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) { setChecking(false); return }
+    getSubscription(user.id).then(sub => {
+      setPaid(sub.paid)
+      setChecking(false)
+    })
+  }, [user, authLoading])
+
+  if (authLoading || checking) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <span className="text-gray-400 text-sm">로딩 중...</span>
+      </div>
+    )
+  }
+
+  if (!user || !paid) return <Navigate to="/landing" replace />
+  return <HomePage />
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -50,10 +79,11 @@ function App() {
               <Route path="kpi" element={<AdminKpiDashboard />} />
             </Route>
           </Route>
+          <Route path="/diagnostic" element={<DiagnosticPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/fail" element={<PaymentFailPage />} />
           <Route path="/" element={<Layout />}>
-            <Route index element={<HomePage />} />
+            <Route index element={<HomeOrLanding />} />
             <Route path="note/:id" element={<WrongNoteDetailPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="reviews" element={<ReviewsPage />} />
@@ -63,7 +93,6 @@ function App() {
             <Route path="stats" element={<StatsPage />} />
             <Route path="strategy" element={<StrategyPage />} />
             <Route path="program" element={<ProgramPage />} />
-            <Route path="diagnostic" element={<DiagnosticPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
