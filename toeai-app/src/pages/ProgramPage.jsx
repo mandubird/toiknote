@@ -505,11 +505,15 @@ const ProgramPage = () => {
           </div>
           )}
 
-          {reports.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-              <h3 className="px-4 py-3 font-medium text-gray-800 border-b border-gray-100">
-                구간 리포트
-              </h3>
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <h3 className="px-4 py-3 font-medium text-gray-800 border-b border-gray-100">
+              구간 리포트
+            </h3>
+            {reports.length === 0 ? (
+              <p className="px-4 py-4 text-sm text-gray-400 text-center">
+                구간을 완료하면 AI가 학습 리포트를 작성해드려요
+              </p>
+            ) : (
               <ul className="divide-y divide-gray-100">
                 {reports.map((r) => (
                   <li key={r.id} className="px-4 py-3">
@@ -534,8 +538,8 @@ const ProgramPage = () => {
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
     </div>
