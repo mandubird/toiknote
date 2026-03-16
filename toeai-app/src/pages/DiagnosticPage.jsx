@@ -501,7 +501,7 @@ const DiagnosticPage = () => {
                 <div className="mt-4 pt-3 border-t border-gray-100">
                   <p className="text-xs text-gray-600">
                     <span className="font-semibold text-gray-700">우선 교정 순서: </span>
-                    {weaknessLabels.slice(0, 3).map((w) => w.label.split(' ')[0]).join(' → ')}
+                    {weaknessLabels.slice(0, 3).map((w) => w.label.split(' ').slice(0, 2).join(' ')).join(' → ')}
                   </p>
                 </div>
               )}
