@@ -20,7 +20,11 @@ const LandingPage = () => {
   }
 
   const handlePlanCta = () => {
-    navigate('/settings')
+    if (user) {
+      navigate('/settings')
+    } else {
+      navigate('/diagnostic')
+    }
   }
 
   return (
@@ -262,7 +266,7 @@ const LandingPage = () => {
       {/* ── 6. 신뢰 / 검증 ── */}
       <section className="border-t border-gray-100 px-4 py-16">
         <div className="mx-auto max-w-4xl">
-          <h2 className="text-center text-2xl font-bold text-gray-900">초기 사용자 데이터 기반으로 고도화 중입니다</h2>
+          <h2 className="text-center text-2xl font-bold text-gray-900">사용자 데이터 기반으로<br />고도화 중입니다</h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-3">
             <div className="rounded-xl border border-gray-200 bg-white p-6">
               <div className="text-2xl mb-2">📝</div>

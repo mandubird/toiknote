@@ -185,11 +185,11 @@ const DashboardPage = () => {
 
   return (
     <div className="p-4 pb-8">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">토답 900 점프 프로젝트</h1>
+      <h1 className="text-xl font-bold text-gray-900 mb-4">토답 900 점프 전략</h1>
 
       {!inProgram ? (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-700 mb-4">100일 프로젝트를 시작하면 여기에 진행 상황이 표시돼요.</p>
+          <p className="text-gray-700 mb-4">시험일을 입력하면 AI가 맞춤 전략 플랜을 만들어줘요.</p>
           <button
             type="button"
             onClick={() => navigate('/diagnostic')}
@@ -202,7 +202,7 @@ const DashboardPage = () => {
             onClick={() => navigate('/program')}
             className="w-full mt-2 py-2 border border-gray-300 text-gray-700 rounded-lg"
           >
-            100일 프로젝트 보기
+            전략 플랜 보기
           </button>
         </div>
       ) : (

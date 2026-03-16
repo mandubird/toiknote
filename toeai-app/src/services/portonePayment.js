@@ -13,7 +13,7 @@
  * Supabase Secrets (Edge Function에서 사용):
  *   PORTONE_API_SECRET       — admin.portone.io → V2 API 시크릿
  */
-import PortOne from '@portone/browser-sdk/v2'
+import * as PortOne from '@portone/browser-sdk/v2'
 import { supabase } from '../lib/supabase'
 
 const STORE_ID    = import.meta.env.VITE_PORTONE_STORE_ID    || ''
