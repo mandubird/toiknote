@@ -11,7 +11,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { updateUserProfile } from '../services/userProfile'
-import { updateExamDate } from '../services/programService'
+import { updateExamDate, startProgramV403 } from '../services/programService'
 import { supabase } from '../lib/supabase'
 
 /* ── 약점 선택지 ── */
@@ -150,6 +150,16 @@ const DiagnosticPage = () => {
         score_gap: tgtVal - curVal,
         weakness_count: selectedWeaknesses.length,
       })
+
+      // 4) 프로그램 자동 활성화 (최초 진단 완료 시, 아직 미시작 경우만)
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('program_status')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!userRow?.program_status || userRow.program_status === 'none') {
+        await startProgramV403(user.id, examDate || null).catch(() => {})
+      }
 
       setStep(5)
     } catch (err) {
@@ -526,17 +536,17 @@ const DiagnosticPage = () => {
             {/* CTA */}
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/program')}
               className="w-full rounded-xl bg-primary-600 py-4 text-lg font-bold text-white hover:bg-primary-700"
             >
-              오답 등록하러 가기 →
+              전략 플랜 보기 →
             </button>
             <button
               type="button"
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/')}
               className="mt-3 w-full rounded-xl border border-gray-300 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50"
             >
-              설정에서 플랜 선택하기
+              홈으로 가기
             </button>
           </div>
         )}
