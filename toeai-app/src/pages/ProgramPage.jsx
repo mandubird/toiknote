@@ -12,7 +12,6 @@ import {
 import { isDiagnosticCompleted } from '../services/diagnosticService'
 import { getSubscription } from '../services/subscription'
 import { getScorePrediction, updateScorePrediction } from '../services/scorePredictionService'
-import { downloadWeeklyReportAsPdf } from '../services/weeklyReportPdf'
 
 /**
  * v4.27: D-day → 압축 티어
@@ -509,30 +508,21 @@ const ProgramPage = () => {
           {reports.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
               <h3 className="px-4 py-3 font-medium text-gray-800 border-b border-gray-100">
-                주간 리포트
+                구간 리포트
               </h3>
               <ul className="divide-y divide-gray-100">
                 {reports.map((r) => (
                   <li key={r.id} className="px-4 py-3">
                     <div className="flex justify-between items-start">
                       <span className="font-medium text-gray-700">구간 {r.week}</span>
-                      <span className="flex items-center gap-2">
-                        <span className="text-sm text-primary-600">
-                          {r.estimated_score_end != null && `예상 ${r.estimated_score_end}점`}
-                          {r.wrong_reduction_rate != null && (
-                            <span className="text-green-600 ml-1">· 오답 {r.wrong_reduction_rate}%↓</span>
-                          )}
-                          {r.cleared_count > 0 && (
-                            <span className="text-emerald-600 ml-1">· 클리어 {r.cleared_count}문제</span>
-                          )}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => downloadWeeklyReportAsPdf(r)}
-                          className="text-xs text-primary-600 hover:underline"
-                        >
-                          PDF
-                        </button>
+                      <span className="text-sm text-primary-600">
+                        {r.estimated_score_end != null && `예상 ${r.estimated_score_end}점`}
+                        {r.wrong_reduction_rate != null && (
+                          <span className="text-green-600 ml-1">· 오답 {r.wrong_reduction_rate}%↓</span>
+                        )}
+                        {r.cleared_count > 0 && (
+                          <span className="text-emerald-600 ml-1">· 클리어 {r.cleared_count}문제</span>
+                        )}
                       </span>
                     </div>
                     {r.ai_feedback && (
