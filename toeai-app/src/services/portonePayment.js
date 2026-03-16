@@ -48,17 +48,22 @@ export async function requestPlanPayment(plan, options = {}) {
   const config = PLANS[plan]
   if (!config) return { success: false, message: '잘못된 요금제예요.' }
 
+  // KG이니시스: paymentId는 영문+숫자만 허용 (언더스코어 제거)
   const paymentId =
-    `toeodap_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    `toeodap${plan}${Date.now()}${Math.random().toString(36).slice(2, 9)}`
 
   try {
     // KG이니시스(HTML5_INICIS): customer 객체는 fullName+email 모두 있을 때만 전송.
-    // 하나라도 빠지면 "지원하지 않는 기능" 파싱 에러 발생 → 안전하게 생략
     const name  = options.customerName  || null
     const email = options.customerEmail || null
     const customer = (name && email) ? { fullName: name, email } : undefined
 
-    const response = await PortOne.requestPayment({
+    // KG이니시스: PC=팝업, 모바일=리다이렉트
+    // redirectUrl은 리다이렉트 방식(모바일)에서만 사용 — PC에 포함 시 "지원하지 않는 기능" 유발 가능
+    const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent)
+    const redirectUrl = `${window.location.origin}/payment/success?plan=${plan}`
+
+    const paymentRequest = {
       storeId:     STORE_ID,
       channelKey:  CHANNEL_KEY,
       paymentId,
@@ -66,9 +71,13 @@ export async function requestPlanPayment(plan, options = {}) {
       totalAmount: config.amount,
       currency:    'KRW',
       payMethod:   'CARD',
+      windowType:  { pc: 'POPUP', mobile: 'REDIRECTION' },
       ...(customer && { customer }),
-      redirectUrl: `${window.location.origin}/payment/success?plan=${plan}`,
-    })
+      ...(isMobile  && { redirectUrl }),
+    }
+
+    console.log('[PortOne] requestPayment →', paymentRequest)
+    const response = await PortOne.requestPayment(paymentRequest)
 
     // 리다이렉트 모드: 페이지가 이동해 response가 null/undefined
     if (!response) {
