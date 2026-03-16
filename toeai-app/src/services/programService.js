@@ -356,7 +356,7 @@ export async function getDashboardSummary(userId) {
     accuracy_change: null,
     part7_time_change: null,
     days_elapsed: 0,
-    days_total: DAYS_TOTAL,
+    days_total: 0,
     programStartDate: null,
     programEndDate: null,
     weakness_top3: [],
@@ -387,14 +387,21 @@ export async function getDashboardSummary(userId) {
   const lastReport = reports?.length ? reports[reports.length - 1] : null
 
   let daysElapsed = 0
+  let daysTotal = DAYS_TOTAL
   if (plan?.programStartDate) {
     const start = new Date(plan.programStartDate)
     const today = new Date()
+    // 시험일 기반 총 일수 계산 (examDate 있으면 사용, 없으면 100일 기본값)
+    if (plan.examDate) {
+      const exam = new Date(plan.examDate)
+      const totalFromExam = Math.max(1, Math.ceil((exam - start) / (24 * 60 * 60 * 1000)))
+      daysTotal = totalFromExam
+    }
     // 오늘까지 경과일 (programEndDate 초과 시 cap)
     const cappedToday = plan.programEndDate
       ? new Date(Math.min(today.getTime(), new Date(plan.programEndDate).getTime()))
       : today
-    daysElapsed = Math.min(DAYS_TOTAL, Math.max(0, Math.floor((cappedToday - start) / (24 * 60 * 60 * 1000))))
+    daysElapsed = Math.min(daysTotal, Math.max(0, Math.floor((cappedToday - start) / (24 * 60 * 60 * 1000))))
   }
 
   const totalWrong = tagStats?.totalWrong || 1
@@ -436,7 +443,7 @@ export async function getDashboardSummary(userId) {
     accuracy_change: lastReport?.accuracy_change ?? null,
     part7_time_change: lastReport?.part7_time_change ?? null,
     days_elapsed: daysElapsed,
-    days_total: DAYS_TOTAL,
+    days_total: daysTotal,
     programStartDate: plan?.programStartDate ?? null,
     programEndDate: plan?.programEndDate ?? null,
     programStatus: plan?.status ?? 'none',
