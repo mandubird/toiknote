@@ -52,10 +52,11 @@ export async function requestPlanPayment(plan, options = {}) {
     `toeodap_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
   try {
-    // undefined 값 제거 — KG이니시스는 undefined 필드 파싱 실패
-    const customer = {}
-    if (options.customerName)  customer.fullName = options.customerName
-    if (options.customerEmail) customer.email    = options.customerEmail
+    // KG이니시스(HTML5_INICIS): customer 객체는 fullName+email 모두 있을 때만 전송.
+    // 하나라도 빠지면 "지원하지 않는 기능" 파싱 에러 발생 → 안전하게 생략
+    const name  = options.customerName  || null
+    const email = options.customerEmail || null
+    const customer = (name && email) ? { fullName: name, email } : undefined
 
     const response = await PortOne.requestPayment({
       storeId:     STORE_ID,
@@ -65,7 +66,7 @@ export async function requestPlanPayment(plan, options = {}) {
       totalAmount: config.amount,
       currency:    'KRW',
       payMethod:   'CARD',
-      ...(Object.keys(customer).length > 0 && { customer }),
+      ...(customer && { customer }),
       redirectUrl: `${window.location.origin}/payment/success?plan=${plan}`,
     })
 

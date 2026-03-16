@@ -150,7 +150,7 @@ const SettingsPage = () => {
     try {
       const result = await requestPlanPayment(planKey, {
         customerEmail: user.email,
-        customerName:  user.displayName || undefined,
+        customerName:  user.user_metadata?.full_name || undefined,
       })
 
       if (result.redirected) return   // 리다이렉트 모드 → PaymentSuccessPage에서 처리

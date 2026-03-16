@@ -265,7 +265,7 @@ const Layout = () => {
         onClose={() => setShowPaywall(false)}
         userId={user?.id}
         userEmail={user?.email}
-        userDisplayName={user?.displayName}
+        userDisplayName={user?.user_metadata?.full_name}
         onPaymentSuccess={() => setShowPaywall(false)}
       />
 
