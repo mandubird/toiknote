@@ -58,9 +58,7 @@ export async function requestPlanPayment(plan, options = {}) {
     const email = options.customerEmail || null
     const customer = (name && email) ? { fullName: name, email } : undefined
 
-    // KG이니시스: PC=팝업, 모바일=리다이렉트
-    // redirectUrl은 리다이렉트 방식(모바일)에서만 사용 — PC에 포함 시 "지원하지 않는 기능" 유발 가능
-    const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent)
+    // 채널이 REDIRECTION 전용(INICIS_V2)이므로 windowType 미설정 + redirectUrl 항상 포함
     const redirectUrl = `${window.location.origin}/payment/success?plan=${plan}`
 
     const paymentRequest = {
@@ -71,9 +69,8 @@ export async function requestPlanPayment(plan, options = {}) {
       totalAmount: config.amount,
       currency:    'KRW',
       payMethod:   'CARD',
-      windowType:  { pc: 'POPUP', mobile: 'REDIRECTION' },
+      redirectUrl,
       ...(customer && { customer }),
-      ...(isMobile  && { redirectUrl }),
     }
 
     console.log('[PortOne] requestPayment →', paymentRequest)
