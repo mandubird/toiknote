@@ -1,5 +1,5 @@
 /**
- * v4.1: 프로그램 만료/미가입 시 연장·재도전 안내 /upgrade
+ * /upgrade — 무료 체험 종료 후 구독 안내 페이지
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -42,53 +42,66 @@ const UpgradePage = () => {
     )
   }
 
-  const isExpired = plan?.status === 'expired' || plan?.status === 'completed'
-  const isNone = plan?.status === 'none'
+  const isExpiredOrCompleted = plan?.status === 'expired' || plan?.status === 'completed'
+  const isNone = !plan?.status || plan?.status === 'none'
   const hasActive = plan?.status === 'active'
 
   return (
     <div className="p-4 pb-8">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">프로젝트 종료</h1>
+      <h1 className="text-xl font-bold text-gray-900 mb-4">Pro 구독</h1>
 
+      {/* 전략 플랜 진행 중 */}
       {hasActive && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-700">현재 100일 프로젝트가 진행 중이에요.</p>
+          <p className="text-base font-semibold text-gray-800 mb-2">전략 플랜이 진행 중이에요</p>
+          <p className="text-sm text-gray-600 mb-4">
+            Pro로 업그레이드하면 전체 전략 플랜과 점수 예측 기능을 이용할 수 있어요.
+          </p>
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
-            className="mt-4 w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
+            onClick={() => navigate('/settings')}
+            className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
           >
-            대시보드로 이동
+            Pro 구독하기
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/program')}
+            className="mt-2 w-full py-2 border border-gray-300 text-gray-700 text-sm rounded-lg"
+          >
+            전략 플랜 보기
           </button>
         </div>
       )}
 
-      {isExpired && (
+      {/* 구독 만료 / 완료 */}
+      {isExpiredOrCompleted && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-2xl font-bold text-primary-600 mb-2">Day 60 완료! 🎉</p>
-          <p className="text-gray-600 mb-4">100일 프로젝트을 모두 마치셨어요.</p>
+          <p className="text-2xl font-bold text-primary-600 mb-2">플랜 종료 🎉</p>
+          <p className="text-gray-600 mb-4">구독 기간이 종료되었어요. 다시 시작하거나 연장할 수 있어요.</p>
           <div className="space-y-3">
             <button
               type="button"
               onClick={() => navigate('/settings')}
-              className="w-full py-3 border border-primary-600 text-primary-600 font-medium rounded-lg"
+              className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
             >
-              30일 연장 (설정에서 결제)
+              구독 연장하기
             </button>
             <button
               type="button"
               onClick={() => navigate('/diagnostic')}
               className="w-full py-3 border border-gray-300 text-gray-700 rounded-lg"
             >
-              재도전 프로그램 신청
+              재진단하고 다시 시작하기
             </button>
           </div>
         </div>
       )}
 
+      {/* 아직 시작 안 함 */}
       {isNone && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <p className="text-gray-700 mb-4">100일 프로젝트에 아직 참여하지 않으셨어요. 진단 후 결제하면 시작할 수 있어요.</p>
+          <p className="text-gray-700 mb-4">아직 전략 플랜을 시작하지 않으셨어요. 진단을 먼저 완료해 주세요.</p>
           <button
             type="button"
             onClick={() => navigate('/diagnostic')}
@@ -98,10 +111,10 @@ const UpgradePage = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/program')}
-            className="w-full mt-2 py-2 border border-gray-300 text-gray-700 rounded-lg"
+            onClick={() => navigate('/settings')}
+            className="w-full mt-2 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg"
           >
-            100일 프로젝트 안내
+            구독 플랜 안내
           </button>
         </div>
       )}

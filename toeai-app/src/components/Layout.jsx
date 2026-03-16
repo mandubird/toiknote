@@ -199,10 +199,10 @@ const Layout = () => {
               <span>무료 체험이 종료되었습니다</span>
               <button
                 type="button"
-                onClick={() => navigate('/upgrade')}
+                onClick={() => navigate('/settings')}
                 className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
               >
-                유료 플랜 보기
+                구독하기
               </button>
             </div>
           ) : (
