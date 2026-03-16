@@ -348,7 +348,7 @@ const DiagnosticPage = () => {
                   value={examDate}
                   min={new Date().toISOString().split('T')[0]}
                   onChange={(e) => setExamDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full max-w-full box-border border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none"
                 />
                 <p className="mt-1 text-xs text-gray-400">나중에 설정에서 변경할 수 있어요</p>
               </div>
