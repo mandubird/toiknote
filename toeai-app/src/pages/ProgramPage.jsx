@@ -33,14 +33,14 @@ const COMPRESSION_INFO = {
     icon: '🤖',
     label: 'AI 압축 모드',
     getText: (dday, blockCount) =>
-      `시험까지 ${dday}일 남았습니다. AI가 8주 플랜을 ${blockCount}개 집중 블록으로 최적화했습니다.`,
+      `시험까지 ${dday}일 남았습니다. AI가 전략 플랜을 ${blockCount}개 집중 블록으로 최적화했습니다.`,
     color: 'bg-blue-50 border-blue-200 text-blue-800',
   },
   medium: {
     icon: '⚡',
     label: 'AI 압축 모드',
     getText: (dday, blockCount) =>
-      `시험까지 ${dday}일 남았습니다. AI가 8주 플랜을 ${blockCount}개 집중 블록으로 압축했습니다.`,
+      `시험까지 ${dday}일 남았습니다. AI가 전략 플랜을 ${blockCount}개 집중 블록으로 압축했습니다.`,
     color: 'bg-orange-50 border-orange-200 text-orange-800',
   },
   emergency: {
@@ -194,7 +194,7 @@ const ProgramPage = () => {
   if (!user) {
     return (
       <div className="p-4">
-        <p className="text-gray-600">100일 프로젝트를 사용하려면 로그인해 주세요.</p>
+        <p className="text-gray-600">전략 플랜을 사용하려면 로그인해 주세요.</p>
       </div>
     )
   }
@@ -249,7 +249,7 @@ const ProgramPage = () => {
       {plan?.status === 'none' && diagnosticDone && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <p className="text-gray-700 mb-4">
-            진단이 완료되었어요. 시험일을 입력하면 맞춤 루틴이 시작돼요. <span className="text-gray-500 text-sm">(최대 100일)</span>
+            진단이 완료되었어요. 시험일을 입력하면 AI 맞춤 전략 플랜이 시작돼요.
           </p>
 
           <div className="mb-4">
@@ -266,7 +266,7 @@ const ProgramPage = () => {
             />
             {examDateInput && (
               <p className="text-xs text-primary-600 mt-1">
-                시험까지 {calcDday(examDateInput)}일 · 프로그램 기간 최대 100일
+                시험까지 {calcDday(examDateInput)}일 · D-day 기준 전략 플랜 자동 구성
               </p>
             )}
           </div>
@@ -282,7 +282,7 @@ const ProgramPage = () => {
             </button>
           ) : (
             <>
-              <p className="text-sm text-amber-700 mb-3">100일 프로젝트를 시작하려면 Pro 구독이 필요해요.</p>
+              <p className="text-sm text-amber-700 mb-3">전략 플랜을 시작하려면 Pro 구독이 필요해요.</p>
               <button
                 type="button"
                 onClick={() => navigate('/settings')}
