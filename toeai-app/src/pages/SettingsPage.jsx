@@ -354,7 +354,7 @@ const SettingsPage = () => {
 
       {/* ── 요금제 (미구독 시) ── */}
       {!subscribed && (
-        <div className="mb-4">
+        <div id="payment-section" className="mb-4">
           <h3 className="font-semibold text-gray-900 mb-1">요금제</h3>
           <p className="text-xs text-gray-500 mb-3">점수와 시험일에 맞는 플랜을 선택하세요</p>
 

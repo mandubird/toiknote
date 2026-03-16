@@ -199,10 +199,15 @@ const Layout = () => {
               <span>무료 체험이 종료되었습니다</span>
               <button
                 type="button"
-                onClick={() => navigate('/settings')}
+                onClick={() => {
+                  navigate('/settings')
+                  setTimeout(() => {
+                    document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth' })
+                  }, 150)
+                }}
                 className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
               >
-                구독하기
+                결제하기
               </button>
             </div>
           ) : (
