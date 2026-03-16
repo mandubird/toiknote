@@ -31,22 +31,11 @@ import ContactPage from './pages/ContactPage'
 import FaqPage from './pages/FaqPage'
 import AboutPage from './pages/AboutPage'
 
-/** "/" 진입 분기: 비로그인/미결제 → 랜딩, 유료 → 앱 홈 */
+/** "/" 진입 분기: 비로그인 → 랜딩, 로그인(trial/paid) → 앱 홈 */
 function HomeOrLanding() {
   const { user, loading: authLoading } = useAuth()
-  const [checking, setChecking] = useState(true)
-  const [paid, setPaid] = useState(false)
 
-  useEffect(() => {
-    if (authLoading) return
-    if (!user) { setChecking(false); return }
-    getSubscription(user.id).then(sub => {
-      setPaid(sub.paid)
-      setChecking(false)
-    })
-  }, [user, authLoading])
-
-  if (authLoading || checking) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <span className="text-gray-400 text-sm">로딩 중...</span>
@@ -54,7 +43,7 @@ function HomeOrLanding() {
     )
   }
 
-  if (!user || !paid) return <Navigate to="/landing" replace />
+  if (!user) return <Navigate to="/landing" replace />
   return <HomePage />
 }
 
