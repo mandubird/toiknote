@@ -52,6 +52,11 @@ export async function requestPlanPayment(plan, options = {}) {
     `toeodap_${plan}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
   try {
+    // undefined 값 제거 — KG이니시스는 undefined 필드 파싱 실패
+    const customer = {}
+    if (options.customerName)  customer.fullName = options.customerName
+    if (options.customerEmail) customer.email    = options.customerEmail
+
     const response = await PortOne.requestPayment({
       storeId:     STORE_ID,
       channelKey:  CHANNEL_KEY,
@@ -60,12 +65,7 @@ export async function requestPlanPayment(plan, options = {}) {
       totalAmount: config.amount,
       currency:    'KRW',
       payMethod:   'CARD',
-      customer: {
-        fullName: options.customerName,
-        email:    options.customerEmail,
-      },
-      // 리다이렉트 모드(모바일 등)에서 성공 시 이동할 URL
-      // plan을 쿼리로 함께 전달 → PaymentSuccessPage에서 Edge Function 검증에 사용
+      ...(Object.keys(customer).length > 0 && { customer }),
       redirectUrl: `${window.location.origin}/payment/success?plan=${plan}`,
     })
 
