@@ -14,3 +14,9 @@ dist-ssr
 .vscode
 .idea
 *.log
+
+# Cursor / Claude
+.claude/
+
+# Supabase local temp
+toeai-app/supabase/.temp/
