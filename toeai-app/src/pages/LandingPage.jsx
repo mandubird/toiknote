@@ -3,25 +3,42 @@
  * 카피 문서 26.03.11_todap_landing_copy_final_v1_0 기반
  */
 import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { PublicFooter } from '../components/PublicLayout'
 import { siteBusinessInfo } from '../config/siteBusinessInfo'
+import { supabase } from '../lib/supabase'
 
 const LandingPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [hasDiagnosed, setHasDiagnosed] = useState(false)
+
+  // 로그인 유저의 진단 완료 여부 확인
+  useEffect(() => {
+    if (!user) { setHasDiagnosed(false); return }
+    supabase
+      .from('users')
+      .select('program_status')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setHasDiagnosed(!!data?.program_status && data.program_status !== 'none')
+      })
+  }, [user])
 
   const scrollToPricing = () => {
     document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const handleMainCta = () => {
-    navigate('/diagnostic')
+    if (hasDiagnosed) navigate('/program')
+    else navigate('/diagnostic')
   }
 
   const handlePlanCta = () => {
     if (user) {
-      navigate('/settings')
+      navigate('/settings?pay=1')
     } else {
       navigate('/diagnostic')
     }
@@ -176,17 +193,32 @@ const LandingPage = () => {
 
           {/* CTA */}
           <div className="mt-8">
-            <p className="mb-2 text-sm font-semibold text-gray-700">1. 먼저 현재 상태를 확인하세요</p>
-            <button
-              type="button"
-              onClick={handleMainCta}
-              className="w-full rounded-xl bg-amber-400 py-4 text-lg font-bold text-gray-900 shadow hover:bg-amber-300"
-            >
-              무료로 내 점수 진단 시작하기 →
-            </button>
-            <p className="mt-2 text-center text-xs text-gray-400 leading-relaxed">
-              로그인 후 오답 문제를 등록하면<br />진단 결과가 더 정확해집니다.
-            </p>
+            {hasDiagnosed ? (
+              <>
+                <p className="mb-2 text-sm font-semibold text-green-700">✅ 이미 진단이 완료됐어요</p>
+                <button
+                  type="button"
+                  onClick={handleMainCta}
+                  className="w-full rounded-xl bg-primary-600 py-4 text-lg font-bold text-white shadow hover:bg-primary-700"
+                >
+                  내 전략 플랜 보기 →
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mb-2 text-sm font-semibold text-gray-700">1. 먼저 현재 상태를 확인하세요</p>
+                <button
+                  type="button"
+                  onClick={handleMainCta}
+                  className="w-full rounded-xl bg-amber-400 py-4 text-lg font-bold text-gray-900 shadow hover:bg-amber-300"
+                >
+                  무료로 내 점수 진단 시작하기 →
+                </button>
+                <p className="mt-2 text-center text-xs text-gray-400 leading-relaxed">
+                  로그인 후 오답 문제를 등록하면<br />진단 결과가 더 정확해집니다.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>
