@@ -67,11 +67,15 @@ const SettingsPage = () => {
   const [examSaving, setExamSaving]     = useState(false)
   const [scoreSaving, setScoreSaving]   = useState(false)
   const [sheetOpen, setSheetOpen]       = useState(false)
+  const [activeTab, setActiveTab]       = useState('info')
   const freeLimit = getFreeLimit()
 
-  // ?pay=1 파라미터로 진입 시 자동으로 결제 시트 열기
+  // ?pay=1 파라미터로 진입 시 구독 탭 + 결제 시트 열기
   useEffect(() => {
-    if (searchParams.get('pay') === '1') setSheetOpen(true)
+    if (searchParams.get('pay') === '1') {
+      setActiveTab('subscription')
+      setSheetOpen(true)
+    }
   }, [searchParams])
 
   useEffect(() => {
@@ -175,6 +179,12 @@ const SettingsPage = () => {
     await signOut()
   }
 
+  const tabs = [
+    { key: 'info',         label: '내 정보' },
+    { key: 'subscription', label: '구독'    },
+    { key: 'policy',       label: '정책'    },
+  ]
+
   return (
     <>
     <PaymentSheet
@@ -183,227 +193,265 @@ const SettingsPage = () => {
       user={user}
       onSuccess={handlePaymentSuccess}
     />
-    <div className="p-4 pb-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-1">설정</h2>
+    <div className="pb-8">
+      {/* ── 헤더 + 탭 ── */}
+      <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-0 sticky top-0 z-10">
+        <h2 className="text-xl font-bold text-gray-900 mb-3">설정</h2>
+        <div className="flex gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 py-2 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === tab.key
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ── 계정 ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-        <h3 className="font-semibold text-gray-900 mb-3">계정</h3>
-        {loading ? (
-          <div className="py-4 text-center text-gray-500 text-sm">불러오는 중…</div>
-        ) : user ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-primary-100 flex items-center justify-center">
-                <span className="text-primary-700 font-semibold text-lg">
-                  {user.displayName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
+      <div className="p-4 space-y-4">
+
+        {/* ══ 내 정보 탭 ══ */}
+        {activeTab === 'info' && (
+          <>
+            {/* 계정 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">계정</h3>
+              {loading ? (
+                <div className="py-4 text-center text-gray-500 text-sm">불러오는 중…</div>
+              ) : user ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-primary-100 flex items-center justify-center">
+                      <span className="text-primary-700 font-semibold text-lg">
+                        {user.email?.[0]?.toUpperCase() || '?'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{user.user_metadata?.full_name || '사용자'}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={handleSignOut} className="text-sm text-red-500 hover:text-red-600">
+                    로그아웃
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-600 mb-4">로그인이 필요합니다</p>
+                  {authError && <p className="text-sm text-red-600 mb-3">{authError}</p>}
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    className="w-full bg-primary-600 text-white py-2.5 px-4 rounded-lg hover:bg-primary-700"
+                  >
+                    구글로 로그인
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 점수 정보 */}
+            {user && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900 mb-1">점수 정보</h3>
+                <p className="text-xs text-gray-500 mb-3">AI 약점 분석과 전략 제안에 사용해요</p>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">현재 총점</label>
+                    <input
+                      type="number" min={200} max={990} value={currentScore}
+                      onChange={(e) => setCurrentScore(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">목표 점수</label>
+                    <input
+                      type="number" min={200} max={990} value={targetScore}
+                      onChange={(e) => setTargetScore(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">LC 점수 <span className="text-gray-400">(선택)</span></label>
+                    <input
+                      type="number" min={5} max={495} value={lcScore}
+                      onChange={(e) => setLcScore(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="350"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">RC 점수 <span className="text-gray-400">(선택)</span></label>
+                    <input
+                      type="number" min={5} max={495} value={rcScore}
+                      onChange={(e) => setRcScore(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="350"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mb-3">LC·RC 점수를 입력하면 파트별 손실 원인을 더 정확하게 분석해요</p>
+                <button
+                  type="button"
+                  onClick={handleSaveScores}
+                  disabled={scoreSaving}
+                  className="w-full py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {scoreSaving ? '저장 중…' : '저장'}
+                </button>
+              </div>
+            )}
+
+            {/* 시험일 */}
+            {user && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900 mb-1">시험일</h3>
+                <p className="text-xs text-gray-500 mb-3">입력하면 D-day 압축 전략 모드가 자동으로 계산돼요</p>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={examDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setExamDate(e.target.value)}
+                    className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveExamDate}
+                    disabled={examSaving || !examDate}
+                    className="shrink-0 py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {examSaving ? '저장 중…' : '저장'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ 구독 탭 ══ */}
+        {activeTab === 'subscription' && (
+          <>
+            {/* 구독 현황 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">구독 현황</h3>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-700">현재 플랜</span>
+                <span className={`text-sm font-semibold ${subscribed ? 'text-primary-600' : 'text-gray-500'}`}>
+                  {PLAN_LABELS[plan] ?? 'FREE'}
                 </span>
               </div>
-              <div>
-                <p className="font-medium text-gray-900 text-sm">{user.displayName || '사용자'}</p>
-                <p className="text-xs text-gray-500">{user.email}</p>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-700">오답 저장</span>
+                <span className="text-sm text-gray-900">
+                  {subscribed ? `무제한 (${savedCount}개 저장됨)` : `${freeLimit}개 중 ${savedCount}개 사용`}
+                </span>
+              </div>
+              {subscribed && daysLeft != null && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-700">남은 기간</span>
+                  <span className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-500' : 'text-gray-900'}`}>
+                    {daysLeft}일 남음
+                  </span>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
+                {subscribed
+                  ? `${PLAN_LABELS[plan]} 이용 중 — 무제한 오답 분석 + AI 전략 코치 활성`
+                  : 'FREE: 오답 5문제 체험. 유료 플랜: 무제한 분석 + D-day 압축 전략 + AI 코치'}
+              </p>
+            </div>
+
+            {/* 요금제 (미구독 시) */}
+            {!subscribed && (
+              <div id="payment-section" className="bg-primary-50 rounded-xl border border-primary-200 p-4">
+                <h3 className="font-semibold text-primary-900 mb-1">요금제</h3>
+                <p className="text-xs text-primary-700 mb-3">15일 · 30일 · 60일 플랜 중 선택하세요</p>
+                <button
+                  type="button"
+                  onClick={() => setSheetOpen(true)}
+                  className="w-full py-3 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition"
+                >
+                  플랜 선택하기
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══ 정책 탭 ══ */}
+        {activeTab === 'policy' && (
+          <>
+            {/* 서비스 정책 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">서비스 정책</h3>
+              <div className="divide-y divide-gray-100">
+                {POLICY_LINKS.map(({ label, path }) => (
+                  <button
+                    key={path}
+                    type="button"
+                    onClick={() => navigate(path)}
+                    className="w-full flex items-center justify-between py-2.5 text-sm text-gray-700 hover:text-primary-600 transition-colors"
+                  >
+                    <span>{label}</span>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ))}
               </div>
             </div>
-            <button type="button" onClick={handleSignOut} className="text-sm text-red-500 hover:text-red-600">
-              로그아웃
-            </button>
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-sm text-gray-600 mb-4">로그인이 필요합니다</p>
-            {authError && <p className="text-sm text-red-600 mb-3">{authError}</p>}
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="w-full bg-primary-600 text-white py-2.5 px-4 rounded-lg hover:bg-primary-700"
-            >
-              구글로 로그인
-            </button>
-          </div>
+
+            {/* 사업자 정보 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">사업자 정보</h3>
+              <div className="space-y-1.5 text-sm">
+                {[
+                  { label: '상호',               value: siteBusinessInfo.businessName       },
+                  { label: '대표자',             value: siteBusinessInfo.ceoName            },
+                  { label: '사업자등록번호',      value: siteBusinessInfo.businessRegNo      },
+                  { label: '통신판매업 신고번호', value: siteBusinessInfo.ecommerceLicenseNo },
+                  { label: '이메일',             value: siteBusinessInfo.supportEmail       },
+                  { label: '전화',               value: siteBusinessInfo.supportPhone       },
+                  { label: '주소',               value: siteBusinessInfo.businessAddress    },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex gap-2">
+                    <span className="text-gray-500 w-32 flex-shrink-0">{label}</span>
+                    <span className="text-gray-800 break-all">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 앱 정보 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">앱 정보</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">버전</span>
+                  <span className="text-gray-900">v4.34</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">문의</span>
+                  <a href={`mailto:${siteBusinessInfo.supportEmail}`} className="text-primary-600">
+                    {siteBusinessInfo.supportEmail}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </>
         )}
-      </div>
 
-      {/* ── 점수 입력 ── */}
-      {user && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-          <h3 className="font-semibold text-gray-900 mb-1">점수 정보</h3>
-          <p className="text-xs text-gray-500 mb-3">AI 약점 분석과 전략 제안에 사용해요</p>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">현재 총점</label>
-              <input
-                type="number" min={200} max={990} value={currentScore}
-                onChange={(e) => setCurrentScore(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="700"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">목표 점수</label>
-              <input
-                type="number" min={200} max={990} value={targetScore}
-                onChange={(e) => setTargetScore(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="900"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">LC 점수 <span className="text-gray-400">(선택)</span></label>
-              <input
-                type="number" min={5} max={495} value={lcScore}
-                onChange={(e) => setLcScore(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="350"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">RC 점수 <span className="text-gray-400">(선택)</span></label>
-              <input
-                type="number" min={5} max={495} value={rcScore}
-                onChange={(e) => setRcScore(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="350"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-gray-400 mb-3">LC·RC 점수를 입력하면 파트별 손실 원인을 더 정확하게 분석해요</p>
-          <button
-            type="button"
-            onClick={handleSaveScores}
-            disabled={scoreSaving}
-            className="w-full py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-          >
-            {scoreSaving ? '저장 중…' : '저장'}
-          </button>
-        </div>
-      )}
-
-      {/* ── 시험일 ── */}
-      {user && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-          <h3 className="font-semibold text-gray-900 mb-1">시험일</h3>
-          <p className="text-xs text-gray-500 mb-3">입력하면 D-day 압축 전략 모드가 자동으로 계산돼요</p>
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={examDate}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={(e) => setExamDate(e.target.value)}
-              className="flex-1 min-w-0 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
-            <button
-              type="button"
-              onClick={handleSaveExamDate}
-              disabled={examSaving || !examDate}
-              className="shrink-0 py-2 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-            >
-              {examSaving ? '저장 중…' : '저장'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── 구독 현황 ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-        <h3 className="font-semibold text-gray-900 mb-3">구독 현황</h3>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-700">현재 플랜</span>
-          <span className="text-sm font-semibold text-primary-600">{PLAN_LABELS[plan] ?? 'FREE'}</span>
-        </div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-700">오답 저장</span>
-          <span className="text-sm text-gray-900">
-            {subscribed ? `무제한 (${savedCount}개 저장됨)` : `${freeLimit}개 중 ${savedCount}개 사용`}
-          </span>
-        </div>
-        {subscribed && daysLeft != null && (
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-700">남은 기간</span>
-            <span className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-500' : 'text-gray-900'}`}>
-              {daysLeft}일 남음
-            </span>
-          </div>
-        )}
-        <p className="text-xs text-gray-500">
-          {subscribed
-            ? `${PLAN_LABELS[plan]} 이용 중 — 무제한 오답 분석 + AI 전략 코치 활성`
-            : 'FREE: 오답 5문제 체험. 유료 플랜: 무제한 분석 + D-day 압축 전략 + AI 코치'}
-        </p>
-      </div>
-
-      {/* ── 요금제 (미구독 시) ── */}
-      {!subscribed && (
-        <div id="payment-section" className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <h3 className="font-semibold text-gray-900 mb-1">요금제</h3>
-          <p className="text-xs text-gray-500 mb-3">15일 · 30일 · 60일 플랜 중 선택하세요</p>
-          <button
-            type="button"
-            onClick={() => setSheetOpen(true)}
-            className="w-full py-3 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition"
-          >
-            플랜 선택하기
-          </button>
-        </div>
-      )}
-
-      {/* ── 정책 링크 ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-        <h3 className="font-semibold text-gray-900 mb-3">서비스 정책</h3>
-        <div className="divide-y divide-gray-100">
-          {POLICY_LINKS.map(({ label, path }) => (
-            <button
-              key={path}
-              type="button"
-              onClick={() => navigate(path)}
-              className="w-full flex items-center justify-between py-2.5 text-sm text-gray-700 hover:text-primary-600 transition-colors"
-            >
-              <span>{label}</span>
-              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 사업자 정보 ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-        <h3 className="font-semibold text-gray-900 mb-3">사업자 정보</h3>
-        <div className="space-y-1.5 text-sm">
-          {[
-            { label: '상호',               value: siteBusinessInfo.businessName      },
-            { label: '대표자',             value: siteBusinessInfo.ceoName           },
-            { label: '사업자등록번호',      value: siteBusinessInfo.businessRegNo     },
-            { label: '통신판매업 신고번호', value: siteBusinessInfo.ecommerceLicenseNo },
-            { label: '이메일',             value: siteBusinessInfo.supportEmail      },
-            { label: '전화',               value: siteBusinessInfo.supportPhone      },
-            { label: '주소',               value: siteBusinessInfo.businessAddress   },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex gap-2">
-              <span className="text-gray-500 w-32 flex-shrink-0">{label}</span>
-              <span className="text-gray-800 break-all">{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 앱 정보 ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">앱 정보</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-600">버전</span>
-            <span className="text-gray-900">v4.34</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">문의</span>
-            <a href={`mailto:${siteBusinessInfo.supportEmail}`} className="text-primary-600">
-              {siteBusinessInfo.supportEmail}
-            </a>
-          </div>
-        </div>
       </div>
     </div>
     </>
