@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { RefreshListProvider } from './contexts/RefreshListContext'
-import { getSubscription } from './services/subscription'
 import Layout from './components/Layout'
-import HomePage from './pages/HomePage'
+import CoachingPage from './pages/CoachingPage'
+import NotesPage from './pages/NotesPage'
 import StatsPage from './pages/StatsPage'
 import StrategyPage from './pages/StrategyPage'
 import SettingsPage from './pages/SettingsPage'
@@ -44,7 +43,7 @@ function HomeOrLanding() {
   }
 
   if (!user) return <Navigate to="/landing" replace />
-  return <HomePage />
+  return <CoachingPage />
 }
 
 function App() {
@@ -73,6 +72,7 @@ function App() {
           <Route path="/payment/fail" element={<PaymentFailPage />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<HomeOrLanding />} />
+            <Route path="notes" element={<NotesPage />} />
             <Route path="note/:id" element={<WrongNoteDetailPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="reviews" element={<ReviewsPage />} />

@@ -140,14 +140,17 @@ const Layout = () => {
   }, [user?.id, refCode])
 
   const tabs = [
-    { path: '/',          label: '홈',     icon: HomeIcon      },
-    { path: '/dashboard', label: '대시보드', icon: DashboardIcon },
-    { path: '/stats',     label: '약점',   icon: WeaknessIcon  },
-    { path: '/strategy',  label: '전략',   icon: StrategyIcon  },
-    { path: '/settings',  label: '설정',   icon: SettingsIcon  },
+    { path: '/',         label: '코칭', icon: HomeIcon },
+    { path: '/notes',    label: '노트', icon: NotesIcon },
+    { path: '/stats',    label: '약점', icon: WeaknessIcon },
+    { path: '/strategy', label: '전략', icon: StrategyIcon },
+    { path: '/settings', label: '설정', icon: SettingsIcon },
   ]
 
-  const isHome = location.pathname === '/'
+  const showCameraButton =
+    location.pathname === '/' ||
+    location.pathname === '/notes' ||
+    location.pathname.startsWith('/note/')
 
   // 비로그인 사용자 접근 제어 (홈 제외 — HomeOrLanding이 처리)
   if (!authLoading && !user && location.pathname !== '/') {
@@ -216,13 +219,13 @@ const Layout = () => {
         </div>
       )}
 
-      {/* 메인 콘텐츠 — 홈에서는 카메라 버튼 높이만큼 추가 패딩 */}
-      <main className={`flex-1 overflow-y-auto ${isHome ? 'pb-40' : 'pb-20'}`}>
+      {/* 메인 콘텐츠 — 카메라 버튼 표시 화면에서는 추가 패딩 */}
+      <main className={`flex-1 overflow-y-auto ${showCameraButton ? 'pb-40' : 'pb-20'}`}>
         <Outlet />
       </main>
 
-      {/* 카메라 버튼 — 홈 탭에서만 표시 */}
-      {isHome && (
+      {/* 카메라 버튼 — 코칭/노트에서 표시 */}
+      {showCameraButton && (
         <CameraButton
           user={user}
           onUploadComplete={handleUploadComplete}
@@ -275,7 +278,14 @@ const Layout = () => {
         <div className="grid grid-cols-5 h-16">
           {tabs.map((tab) => {
             const Icon = tab.icon
-            const isActive = location.pathname === tab.path || (tab.path === '/dashboard' && (location.pathname.startsWith('/week') || location.pathname.startsWith('/report')))
+            const p = location.pathname
+            const isActive =
+              (tab.path === '/' && p === '/') ||
+              (tab.path === '/notes' && (p === '/notes' || p.startsWith('/note/'))) ||
+              (tab.path === '/stats' && p.startsWith('/stats')) ||
+              (tab.path === '/strategy' &&
+                (p.startsWith('/strategy') || p.startsWith('/program') || p.startsWith('/week') || p.startsWith('/report'))) ||
+              (tab.path === '/settings' && p.startsWith('/settings'))
             
             return (
               <button
@@ -303,9 +313,9 @@ const HomeIcon = ({ className }) => (
   </svg>
 )
 
-const DashboardIcon = ({ className }) => (
+const NotesIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h8M8 10h8M8 14h5M6 4h12a2 2 0 012 2v14l-4-2H6a2 2 0 01-2-2V6a2 2 0 012-2z" />
   </svg>
 )
 
