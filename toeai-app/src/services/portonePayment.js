@@ -58,7 +58,8 @@ export async function requestPlanPayment(plan, options = {}) {
     const email = options.customerEmail || null
     const customer = (name && email) ? { fullName: name, email } : undefined
 
-    // INICIS_V2 채널은 POPUP 미지원 → PC/모바일 모두 REDIRECTION 강제
+    // HTML5_INICIS는 windowType 파라미터 미지원 → 자동 감지 (PC: POPUP, 모바일: REDIRECTION)
+    // redirectUrl은 모바일 REDIRECTION 모드에 필요하므로 항상 포함
     const redirectUrl = `${window.location.origin}/payment/success?plan=${plan}`
 
     const paymentRequest = {
@@ -69,7 +70,6 @@ export async function requestPlanPayment(plan, options = {}) {
       totalAmount: config.amount,
       currency:    'KRW',
       payMethod:   'CARD',
-      windowType:  { pc: 'REDIRECTION', mobile: 'REDIRECTION' },
       redirectUrl,
       ...(customer && { customer }),
     }
