@@ -59,7 +59,7 @@ const UpgradePage = () => {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/settings?pay=1')}
             className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
           >
             Pro 구독하기
@@ -82,7 +82,7 @@ const UpgradePage = () => {
           <div className="space-y-3">
             <button
               type="button"
-              onClick={() => navigate('/settings')}
+              onClick={() => navigate('/settings?pay=1')}
               className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
             >
               구독 연장하기
@@ -111,7 +111,7 @@ const UpgradePage = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/settings?pay=1')}
             className="w-full mt-2 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg"
           >
             구독 플랜 안내

@@ -284,7 +284,7 @@ const ProgramPage = () => {
               <p className="text-sm text-amber-700 mb-3">전략 플랜을 시작하려면 Pro 구독이 필요해요.</p>
               <button
                 type="button"
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate('/settings?pay=1')}
                 className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg"
               >
                 결제하고 시작하기
@@ -394,7 +394,7 @@ const ProgramPage = () => {
               </p>
               <button
                 type="button"
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate('/settings?pay=1')}
                 className="w-full py-3 bg-amber-500 text-white font-medium rounded-lg hover:bg-amber-600 active:scale-95 transition"
               >
                 Pro로 업그레이드하기

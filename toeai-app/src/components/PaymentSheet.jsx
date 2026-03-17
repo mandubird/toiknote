@@ -52,6 +52,7 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
   const [consents, setConsents]           = useState([false, false, false, false])
   const [paymentLoading, setPaymentLoading] = useState(null)
   const [paymentError, setPaymentError]   = useState(null)
+  const [customerPhone, setCustomerPhone] = useState('')
 
   const allConsented = consents.every(Boolean)
 
@@ -61,6 +62,7 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
       setConsents([false, false, false, false])
       setPaymentError(null)
       setPaymentLoading(null)
+      setCustomerPhone('')
     }
   }, [open])
 
@@ -77,6 +79,12 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
   const toggleConsent = (i) =>
     setConsents((prev) => prev.map((v, idx) => (idx === i ? !v : v)))
 
+  const phoneValid = (() => {
+    const v = customerPhone.trim()
+    if (!v) return false
+    return /^01[0-9]-?\d{3,4}-?\d{4}$/.test(v.replace(/\s+/g, ''))
+  })()
+
   const handlePlanPayment = async (planKey) => {
     if (!user || paymentLoading) return
     setPaymentError(null)
@@ -85,6 +93,7 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
       const result = await requestPlanPayment(planKey, {
         customerEmail: user.email,
         customerName:  user.user_metadata?.full_name || undefined,
+        customerPhone,
       })
 
       if (result.redirected) return  // 리다이렉트 모드 → PaymentSuccessPage에서 처리
@@ -193,6 +202,23 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
             )}
           </div>
 
+          {/* 휴대폰 번호 (KG이니시스 V2 필수) */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-700 mb-1.5">휴대폰 번호</p>
+            <p className="text-[11px] text-gray-500 mb-2">KG이니시스 V2 일반 결제는 구매자 휴대폰 번호가 필수예요.</p>
+            <input
+              type="tel"
+              inputMode="tel"
+              placeholder="010-1234-5678"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            />
+            {!phoneValid && customerPhone.trim() !== '' && (
+              <p className="text-[11px] text-red-600 mt-1">휴대폰 번호 형식을 확인해 주세요.</p>
+            )}
+          </div>
+
           {/* 플랜 카드 */}
           <div className="space-y-3 pb-4">
             {PLAN_CARDS.map((card) => {
@@ -222,7 +248,7 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
                   <p className="text-xs text-gray-500 mb-3">{card.desc}</p>
                   <button
                     type="button"
-                    disabled={!!paymentLoading || !allConsented}
+                    disabled={!!paymentLoading || !allConsented || !phoneValid}
                     onClick={() => handlePlanPayment(card.key)}
                     className={`w-full py-2.5 rounded-lg text-sm font-semibold transition ${
                       card.main

@@ -34,7 +34,7 @@ export const PLANS = {
  * - 데스크톱: 팝업 응답 반환
  *
  * @param {'pro'|'elite'} plan
- * @param {{ customerName?: string, customerEmail?: string }} [options]
+ * @param {{ customerName?: string, customerEmail?: string, customerPhone?: string }} [options]
  * @returns {Promise<{ success: boolean, paymentId?: string, txId?: string,
  *                     redirected?: boolean, message?: string }>}
  */
@@ -53,10 +53,21 @@ export async function requestPlanPayment(plan, options = {}) {
     `toeodap${plan}${Date.now()}${Math.random().toString(36).slice(2, 9)}`
 
   try {
-    // KG이니시스(HTML5_INICIS): customer 객체는 fullName+email 모두 있을 때만 전송.
-    const name  = options.customerName  || null
-    const email = options.customerEmail || null
-    const customer = (name && email) ? { fullName: name, email } : undefined
+    const phone = (options.customerPhone || '').trim()
+    if (!phone) {
+      return {
+        success: false,
+        message: '결제에 필요한 휴대폰 번호를 입력해 주세요. (KG이니시스 V2 필수)',
+      }
+    }
+
+    const name  = (options.customerName || '').trim()
+    const email = (options.customerEmail || '').trim()
+    const customer = {
+      ...(name  && { fullName: name }),
+      ...(email && { email }),
+      phoneNumber: phone,
+    }
 
     // HTML5_INICIS는 windowType 파라미터 미지원 → 자동 감지 (PC: POPUP, 모바일: REDIRECTION)
     // redirectUrl은 모바일 REDIRECTION 모드에 필요하므로 항상 포함
@@ -71,7 +82,7 @@ export async function requestPlanPayment(plan, options = {}) {
       currency:    'KRW',
       payMethod:   'CARD',
       redirectUrl,
-      ...(customer && { customer }),
+      customer,
     }
 
     console.log('[PortOne] requestPayment →', paymentRequest)

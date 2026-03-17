@@ -7,7 +7,7 @@ const PLAN_CARDS = [
   { key: 'd60', label: '장기 준비용',   title: '60일 안정',  main: false  },
 ]
 
-const PaywallModal = ({ open, onClose, userId, userEmail, userDisplayName, onPaymentSuccess }) => {
+const PaywallModal = ({ open, onClose, userId, userEmail, userDisplayName, userPhone, onPaymentSuccess }) => {
   const [loading, setLoading] = useState(null)
   const [error, setError]     = useState(null)
 
@@ -16,9 +16,15 @@ const PaywallModal = ({ open, onClose, userId, userEmail, userDisplayName, onPay
     setError(null)
     setLoading(planKey)
     try {
+      const phone =
+        (userPhone && String(userPhone).trim()) ||
+        window.prompt('결제에 필요한 휴대폰 번호를 입력해 주세요. (예: 010-1234-5678)') ||
+        ''
+
       const result = await requestPlanPayment(planKey, {
         customerEmail: userEmail,
         customerName:  userDisplayName,
+        customerPhone: phone,
       })
 
       // 리다이렉트 모드: PaymentSuccessPage에서 처리

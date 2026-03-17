@@ -242,7 +242,7 @@ const StrategyPage = () => {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/settings?pay=1')}
             className="mt-2 text-xs font-medium text-amber-700 underline"
           >
             설정에서 구독하기 →

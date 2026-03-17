@@ -181,8 +181,7 @@ const SettingsPage = () => {
 
   const tabs = [
     { key: 'info',         label: '내 정보' },
-    { key: 'subscription', label: '구독'    },
-    { key: 'policy',       label: '정책'    },
+    { key: 'subscription', label: '구독 · 결제' },
   ]
 
   return (
@@ -197,16 +196,16 @@ const SettingsPage = () => {
       {/* ── 헤더 + 탭 ── */}
       <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-0 sticky top-0 z-10">
         <h2 className="text-xl font-bold text-gray-900 mb-3">설정</h2>
-        <div className="flex gap-1">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-2 text-sm font-semibold border-b-2 transition-colors ${
+              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
                 activeTab === tab.key
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                  ? 'bg-white text-primary-700 shadow-sm'
+                  : 'bg-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
               {tab.label}
@@ -336,6 +335,23 @@ const SettingsPage = () => {
                 </div>
               </div>
             )}
+
+            {/* 앱 정보 (policy 탭에서 이동) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">앱 정보</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">버전</span>
+                  <span className="text-gray-900">v4.34</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">문의</span>
+                  <a href={`mailto:${siteBusinessInfo.supportEmail}`} className="text-primary-600">
+                    {siteBusinessInfo.supportEmail}
+                  </a>
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -386,13 +402,8 @@ const SettingsPage = () => {
                 </button>
               </div>
             )}
-          </>
-        )}
 
-        {/* ══ 정책 탭 ══ */}
-        {activeTab === 'policy' && (
-          <>
-            {/* 서비스 정책 */}
+            {/* 서비스 정책 (policy 탭에서 이동) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <h3 className="font-semibold text-gray-900 mb-3">서비스 정책</h3>
               <div className="divide-y divide-gray-100">
@@ -412,7 +423,7 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            {/* 사업자 정보 */}
+            {/* 사업자 정보 (policy 탭에서 이동) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <h3 className="font-semibold text-gray-900 mb-3">사업자 정보</h3>
               <div className="space-y-1.5 text-sm">
@@ -430,23 +441,6 @@ const SettingsPage = () => {
                     <span className="text-gray-800 break-all">{value}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-
-            {/* 앱 정보 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">앱 정보</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">버전</span>
-                  <span className="text-gray-900">v4.34</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">문의</span>
-                  <a href={`mailto:${siteBusinessInfo.supportEmail}`} className="text-primary-600">
-                    {siteBusinessInfo.supportEmail}
-                  </a>
-                </div>
               </div>
             </div>
           </>
