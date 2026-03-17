@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
 import { getSubscription, getFreeLimit, PLAN_LABELS } from '../services/subscription'
 import { getUserProfile, updateUserProfile } from '../services/userProfile'
-import { requestPlanPayment, verifyPortonePayment, PLANS } from '../services/portonePayment'
+import { PLANS } from '../services/portonePayment'
 import { siteBusinessInfo } from '../config/siteBusinessInfo'
 import { updateExamDate } from '../services/programService'
 import { supabase } from '../lib/supabase'
+import PaymentSheet from '../components/PaymentSheet'
 
 const POLICY_LINKS = [
   { label: '이용약관',         path: '/terms'          },
@@ -52,6 +53,7 @@ const PLAN_BENEFITS = [
 const SettingsPage = () => {
   const { user, loading, signInWithGoogle, signOut } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [authError, setAuthError]       = useState(null)
   const [savedCount, setSavedCount]     = useState(0)
   const [subscribed, setSubscribed]     = useState(false)
@@ -64,14 +66,13 @@ const SettingsPage = () => {
   const [examDate, setExamDate]         = useState('')
   const [examSaving, setExamSaving]     = useState(false)
   const [scoreSaving, setScoreSaving]   = useState(false)
-  const [paymentLoading, setPaymentLoading] = useState(null)
-  const [paymentError, setPaymentError]     = useState(null)
-  const [consents, setConsents]             = useState([false, false, false, false])
+  const [sheetOpen, setSheetOpen]       = useState(false)
   const freeLimit = getFreeLimit()
-  const allConsented = consents.every(Boolean)
 
-  const toggleConsent = (i) =>
-    setConsents((prev) => prev.map((v, idx) => (idx === i ? !v : v)))
+  // ?pay=1 파라미터로 진입 시 자동으로 결제 시트 열기
+  useEffect(() => {
+    if (searchParams.get('pay') === '1') setSheetOpen(true)
+  }, [searchParams])
 
   useEffect(() => {
     if (!user) {
@@ -143,37 +144,10 @@ const SettingsPage = () => {
     }
   }
 
-  const handlePlanPayment = async (planKey) => {
-    if (!user || paymentLoading) return
-    setPaymentError(null)
-    setPaymentLoading(planKey)
-    try {
-      const result = await requestPlanPayment(planKey, {
-        customerEmail: user.email,
-        customerName:  user.user_metadata?.full_name || undefined,
-      })
-
-      if (result.redirected) return   // 리다이렉트 모드 → PaymentSuccessPage에서 처리
-
-      if (!result.success) {
-        setPaymentError(result.message || '결제에 실패했어요.')
-        return
-      }
-
-      // 팝업 모드 성공 → Edge Function 서버사이드 검증
-      const verified = await verifyPortonePayment(result.paymentId, user.id, planKey)
-      if (verified.success) {
-        setSubscribed(true)
-        setPlan(planKey)
-        setDaysLeft(PLANS[planKey]?.days ?? null)
-      } else {
-        setPaymentError(verified.message || '결제 검증에 실패했어요.')
-      }
-    } catch (err) {
-      setPaymentError(err?.message || '결제 요청에 실패했어요.')
-    } finally {
-      setPaymentLoading(null)
-    }
+  const handlePaymentSuccess = (planKey) => {
+    setSubscribed(true)
+    setPlan(planKey)
+    setDaysLeft(PLANS[planKey]?.days ?? null)
   }
 
   const handleSaveExamDate = async () => {
@@ -202,6 +176,13 @@ const SettingsPage = () => {
   }
 
   return (
+    <>
+    <PaymentSheet
+      open={sheetOpen}
+      onClose={() => setSheetOpen(false)}
+      user={user}
+      onSuccess={handlePaymentSuccess}
+    />
     <div className="p-4 pb-8">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-1">설정</h2>
@@ -354,113 +335,16 @@ const SettingsPage = () => {
 
       {/* ── 요금제 (미구독 시) ── */}
       {!subscribed && (
-        <div id="payment-section" className="mb-4">
+        <div id="payment-section" className="mb-4 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <h3 className="font-semibold text-gray-900 mb-1">요금제</h3>
-          <p className="text-xs text-gray-500 mb-3">점수와 시험일에 맞는 플랜을 선택하세요</p>
-
-          {paymentError && (
-            <p className="text-xs text-red-600 mb-3">{paymentError}</p>
-          )}
-
-          {/* 공통 혜택 */}
-          <div className="bg-primary-50 rounded-xl p-3 mb-3">
-            <p className="text-xs font-semibold text-primary-800 mb-1.5">모든 플랜 공통 혜택</p>
-            <div className="space-y-1">
-              {PLAN_BENEFITS.map((b) => (
-                <p key={b} className="text-xs text-primary-700">✔ {b}</p>
-              ))}
-            </div>
-          </div>
-
-          {/* 결제 전 동의 체크박스 */}
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-3">
-            <p className="text-xs font-semibold text-gray-700 mb-2">결제 전 동의 (4가지 모두 확인해 주세요)</p>
-            {[
-              { label: '이용약관에 동의합니다', link: '/terms' },
-              { label: '개인정보처리방침에 동의합니다', link: '/privacy' },
-              { label: '교환·환불·취소 규정을 확인했습니다', link: '/refund-policy' },
-              { label: '디지털 콘텐츠 제공이 결제 후 즉시 시작될 수 있음을 확인했습니다', link: null },
-            ].map((item, i) => (
-              <label
-                key={i}
-                className="flex items-start gap-2 py-1.5 cursor-pointer"
-                onClick={() => toggleConsent(i)}
-              >
-                <div className={`mt-0.5 w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center transition ${
-                  consents[i] ? 'bg-primary-600 border-primary-600' : 'border-gray-400 bg-white'
-                }`}>
-                  {consents[i] && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </div>
-                <span className="text-xs text-gray-700 leading-relaxed">
-                  {item.label}
-                  {item.link && (
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="ml-1 text-primary-600 underline"
-                    >
-                      보기
-                    </a>
-                  )}
-                </span>
-              </label>
-            ))}
-            {!allConsented && (
-              <p className="text-xs text-amber-600 mt-1">위 항목을 모두 확인해야 결제할 수 있어요.</p>
-            )}
-          </div>
-
-          {/* 3종 플랜 카드 */}
-          <div className="space-y-3">
-            {PLAN_CARDS.map((card) => {
-              const planInfo = PLANS[card.key]
-              const isMain   = card.main
-              return (
-                <div
-                  key={card.key}
-                  className={`rounded-xl border-2 p-4 ${
-                    isMain
-                      ? 'border-primary-600 bg-primary-50 shadow-sm'
-                      : 'border-gray-200 bg-white'
-                  }`}
-                >
-                  {/* 뱃지 */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      isMain ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {card.badge}
-                    </span>
-                    <span className={`text-base font-bold ${isMain ? 'text-primary-700' : 'text-gray-800'}`}>
-                      {planInfo?.amount.toLocaleString()}원
-                    </span>
-                  </div>
-                  <p className={`text-sm font-semibold mb-1 ${isMain ? 'text-primary-900' : 'text-gray-900'}`}>
-                    {card.title} ({planInfo?.days}일)
-                  </p>
-                  <p className="text-xs text-gray-500 mb-3">{card.desc}</p>
-                  <button
-                    type="button"
-                    disabled={!!paymentLoading || !allConsented}
-                    onClick={() => handlePlanPayment(card.key)}
-                    className={`w-full py-2.5 rounded-lg text-sm font-semibold transition ${
-                      isMain
-                        ? 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50'
-                        : 'border border-primary-600 text-primary-600 hover:bg-primary-50 disabled:opacity-50'
-                    }`}
-                  >
-                    {paymentLoading === card.key ? '결제창 열림…' : `${card.title} 시작`}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
+          <p className="text-xs text-gray-500 mb-3">15일 · 30일 · 60일 플랜 중 선택하세요</p>
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            className="w-full py-3 bg-primary-600 text-white rounded-xl text-sm font-semibold hover:bg-primary-700 transition"
+          >
+            플랜 선택하기
+          </button>
         </div>
       )}
 
@@ -522,6 +406,7 @@ const SettingsPage = () => {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
