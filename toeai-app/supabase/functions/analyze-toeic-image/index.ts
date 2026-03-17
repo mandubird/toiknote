@@ -1,0 +1,169 @@
+/**
+ * analyze-toeic-image — OpenAI GPT-4o mini 이미지 분석 (서버사이드)
+ *
+ * POST /functions/v1/analyze-toeic-image
+ * Body: { imageUrl: string }
+ * Headers: Authorization: Bearer {supabase_user_access_token}
+ *
+ * 필요한 Supabase Secrets:
+ *   OPENAI_API_KEY — OpenAI API 키
+ */
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
+const MODEL = 'gpt-4o-mini'
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function jsonRes(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  })
+}
+
+const SYSTEM_PROMPT = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니다.
+사용자가 찍은 토익 문제/지문 이미지를 분석해서 아래 JSON 형식으로만 답하세요.
+
+먼저 이미지에서 보이는 모든 문제 번호(숫자)를 탐지해서 각 문제별로 question_number 필드를 채우세요.
+문제 번호가 보이는 경우, 반드시 문제 번호 범위로 파트를 결정하고, 텍스트 내용으로만 파트를 추정하지 마세요.
+
+토익 파트 번호 기준:
+- 1~6번 → Part 1 (LC)
+- 7~31번 → Part 2 (LC)
+- 32~70번 → Part 3 (LC)
+- 71~100번 → Part 4 (LC)
+- 101~130번 → Part 5 (RC)
+- 131~146번 → Part 6 (RC)
+- 147~200번 → Part 7 (RC)
+
+문제 번호가 전혀 보이지 않을 때에만 텍스트 내용으로 파트를 추정해도 됩니다.
+
+모든 태그와 세부 분류 필드는 반드시 한국어(한글)로만 작성하세요.
+영어 단어나 로마자 표기는 사용하지 말고, "관계대명사", "현재완료", "부정사"처럼 한국어 표현으로 통일하세요.
+
+이미지 안에 여러 문제가 있으면, 각 문제를 questions 배열의 원소로 모두 반환하세요.
+questions 배열 안의 **모든** 원소에 대해 question, answer, explanation, tags, difficulty를 빠짐없이 채워야 합니다.
+특히 Part 7에서 147번/148번처럼 여러 문제가 한 지문을 공유하더라도,
+147번과 148번 각각에 대해 고유한 question, answer, explanation, tags를 작성해야 하며
+첫 번째 문제에만 채우고 나머지 문제는 비워 두면 안 됩니다.
+같은 지문을 공유하는 문제들은 같은 passage_group_id로 묶으세요 (예: 147번/148번이면 "pg_147_148").
+
+응답 JSON 형식:
+{
+  "questions": [
+    {
+      "question_number": 147,
+      "part": "Part 7",
+      "lcOrRc": "LC" 또는 "RC",
+      "question": "문제 텍스트...",
+      "answer": "",
+      "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
+      "explanation": "정답 해설",
+      "tags": ["관계대명사", "현재완료"],
+      "difficulty": 1,
+      "part1ImageTrapType": null,
+      "part1KeywordMissed": null,
+      "part1PassiveVoiceError": null,
+      "questionPattern": null,
+      "answerType": null,
+      "part3QuestionType": null,
+      "part3SetPosition": null,
+      "part3PreviewRead": null,
+      "part3ConcentrationDrop": null,
+      "part4LectureType": null,
+      "part4QuestionType": null,
+      "part4NoteTaking": null,
+      "grammarCategory": null,
+      "grammarSubType": null,
+      "part6BlankType": null,
+      "part6ContextFailReason": null,
+      "passageType": null,
+      "questionType": null,
+      "rereadCount": null,
+      "passage_group_id": null,
+      "keyVocabulary": null
+    }
+  ]
+}
+
+다른 말 없이 반드시 JSON만 출력하세요.`
+
+const USER_PROMPT = `이 토익 문제 이미지를 분석해서 위에서 정의한 JSON 형식으로만 답해 주세요.
+- 이미지 안에 보이는 모든 문제 번호를 찾아서 question_number에 넣어 주세요.
+- 문제 번호가 보이는 경우, 반드시 번호 범위로 part와 lcOrRc를 결정하세요.
+- 문제가 여러 개면 questions 배열에 모두 넣고, 같은 지문을 공유하면 passage_group_id로 묶어 주세요.
+- 각 문제에 대해 part, lcOrRc, question, answer, explanation, tags, difficulty를 채우고,
+  가능한 경우 파트별 세부 필드(문법/질문유형/재독횟수 등)도 채워 주세요.
+해당 안 되는 필드는 null 또는 생략해도 됩니다.
+
+특히 tags, grammarCategory, grammarSubType, passageType, questionType, questionPattern, answerType 등
+모든 분류 관련 텍스트는 반드시 한국어(한글)로만 작성하세요.`
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS_HEADERS })
+  }
+
+  try {
+    const { imageUrl } = await req.json()
+
+    if (!imageUrl) {
+      return jsonRes({ error: 'imageUrl이 없어요.' }, 400)
+    }
+
+    if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY 환경변수가 없음')
+      return jsonRes({ error: '서버 설정 오류 (OPENAI_API_KEY 미설정)' }, 500)
+    }
+
+    const openaiRes = await fetch(OPENAI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: USER_PROMPT },
+              { type: 'image_url', image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 1024,
+      }),
+    })
+
+    if (!openaiRes.ok) {
+      const err = await openaiRes.json().catch(() => ({}))
+      console.error('OpenAI API 오류:', openaiRes.status, err)
+      return jsonRes(
+        { error: (err as any)?.error?.message || `OpenAI API 오류 (${openaiRes.status})` },
+        502
+      )
+    }
+
+    const data = await openaiRes.json()
+    const content = data?.choices?.[0]?.message?.content
+    if (!content) {
+      return jsonRes({ error: 'AI 분석 결과를 받지 못했어요.' }, 502)
+    }
+
+    return jsonRes({ content })
+
+  } catch (err) {
+    console.error('analyze-toeic-image 예외:', err)
+    return jsonRes({ error: '서버 오류가 발생했어요.' }, 500)
+  }
+})
