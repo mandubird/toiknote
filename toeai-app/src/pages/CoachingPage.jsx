@@ -242,8 +242,8 @@ export default function CoachingPage() {
       {!sub.paid && (
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
           <p className="text-sm font-semibold text-amber-900 mb-1">Pro에서 달라지는 것</p>
-          <ul className="text-sm text-amber-800 space-y-1 mb-3">
-            <li>• 구간 리포트/PDF로 “내가 오르는 근거”를 기록</li>
+          <ul className=”text-sm text-amber-800 space-y-1 mb-3”>
+            <li>• 구간 리포트로 “내가 오르는 근거”를 기록</li>
             <li>• D-day 압축 전략으로 “지금 버릴 것/할 것”을 명확히</li>
             <li>• 무제한 오답 분석 + AI 코치 심화</li>
           </ul>
