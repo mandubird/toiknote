@@ -1,18 +1,21 @@
+const borderColors = {
+  1: 'border-l-accent-500',
+  2: 'border-l-primary-400',
+  3: 'border-l-surface-300',
+}
+
 export default function PriorityWeaknessCard({ rank, tag, count, reason, action }) {
   return (
-    <div className="bg-red-50 rounded-xl p-4 mb-3">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-red-500 font-bold text-base">{rank}</span>
-        <span className="font-semibold text-gray-900 text-base">{tag}</span>
-        <span className="text-red-400 text-sm">({count}개)</span>
+    <div className={`flex items-start gap-3 p-3 rounded-xl bg-surface-50 border border-surface-200 border-l-4 ${borderColors[rank] || 'border-l-surface-300'}`}>
+      <span className={`font-black text-lg w-5 shrink-0 leading-none mt-0.5 ${rank === 1 ? 'text-accent-500' : 'text-surface-400'}`}>
+        {rank}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-surface-900">{tag}</p>
+        <p className="text-xs text-surface-500 mt-0.5 leading-snug">{reason}</p>
+        <p className="text-xs font-semibold text-primary-600 mt-1.5">→ {action}</p>
       </div>
-      <p className="text-red-500 text-sm leading-relaxed mb-1">
-        {reason}
-      </p>
-      <p className="text-gray-600 text-sm leading-relaxed">
-        → {action}
-      </p>
+      <span className="text-xs text-surface-400 shrink-0 mt-0.5">{count}회</span>
     </div>
   )
 }
-

@@ -215,6 +215,25 @@ const SettingsPage = () => {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* 비구독: Pro 카드 상단 고정 */}
+        {user && !subscribed && (
+          <div className="rounded-2xl bg-primary-900 text-white p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-accent-400 font-black text-sm uppercase tracking-widest">Pro</span>
+              <span className="text-primary-300 text-xs">월 29,900원</span>
+            </div>
+            <p className="text-sm text-primary-200 mb-4">
+              AI 전략 분석 · 무제한 오답 · D-day 압축 코칭
+            </p>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('subscription'); setSheetOpen(true) }}
+              className="w-full py-3 rounded-xl bg-accent-500 text-white font-bold hover:bg-accent-600 transition-colors"
+            >
+              Pro 시작하기
+            </button>
+          </div>
+        )}
 
         {/* ══ 내 정보 탭 ══ */}
         {activeTab === 'info' && (
@@ -313,9 +332,16 @@ const SettingsPage = () => {
 
             {/* 시험일 */}
             {user && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-900 mb-1">시험일</h3>
-                <p className="text-xs text-gray-500 mb-3">입력하면 D-day 압축 전략 모드가 자동으로 계산돼요</p>
+              <div className={`rounded-xl p-4 ${!examDate ? 'border-2 border-accent-300 bg-accent-50' : 'border border-surface-200 bg-white'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-sm font-bold text-surface-900">시험일</h3>
+                  {!examDate && (
+                    <span className="text-xs font-semibold text-accent-600 bg-accent-100 px-2 py-0.5 rounded-full">
+                      입력하면 D-day 전략이 계산돼요
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-surface-500 mb-3">입력하면 D-day 압축 전략 모드가 자동으로 계산돼요</p>
                 <div className="flex gap-2">
                   <input
                     type="date"
@@ -363,9 +389,15 @@ const SettingsPage = () => {
               <h3 className="font-semibold text-gray-900 mb-3">결제 현황</h3>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-700">현재 이용권</span>
-                <span className={`text-sm font-semibold ${subscribed ? 'text-primary-600' : 'text-gray-500'}`}>
-                  {PLAN_LABELS[plan] ?? 'FREE'}
-                </span>
+                {subscribed ? (
+                  <span className="px-2.5 py-1 rounded-full bg-primary-900 text-accent-400 text-xs font-black">
+                    Pro
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full bg-surface-100 text-surface-500 text-xs font-medium">
+                    무료 체험
+                  </span>
+                )}
               </div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-700">오답 저장</span>

@@ -33,10 +33,10 @@ const MODE_CONFIG = {
   unknown: {
     label: '모드 미설정',
     icon: '📅',
-    bg: 'bg-gray-50',
-    border: 'border-gray-200',
-    text: 'text-gray-700',
-    badge: 'bg-gray-100 text-gray-600',
+    bg: 'bg-surface-50',
+    border: 'border-surface-200',
+    text: 'text-surface-700',
+    badge: 'bg-surface-100 text-surface-600',
     desc: '설정에서 시험일을 입력하면 D-day 압축 모드가 계산돼요.',
     reason:
       '시험일까지 남은 시간이 확인되지 않아, 아직 전략 모드를 고정하지 않았어요. 먼저 시험일을 입력해 주세요.',
@@ -185,24 +185,33 @@ const StrategyPage = () => {
 
       {/* ── 섹션1: StrategyHero ── */}
       <div className="mb-2">
-        <h2 className="text-2xl font-bold text-gray-900">D-day 압축 전략</h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <h2 className="text-2xl font-bold text-surface-900">D-day 압축 전략</h2>
+        <p className="text-sm text-surface-500 mt-1">
           이번 주에 “무엇을/얼마나” 할지 정해서, 점수 손실부터 줄입니다
         </p>
       </div>
 
       {/* ── 섹션2: 현재 모드 카드 ── */}
-      <div className={`rounded-xl border p-4 ${modeConf.bg} ${modeConf.border}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">{modeConf.icon}</span>
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${modeConf.badge}`}>
+      <div className={`rounded-2xl border-2 p-5 ${modeConf.bg} ${modeConf.border}`}>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xl">{modeConf.icon}</span>
+          <span className={`text-xs font-black px-2.5 py-1 rounded-full ${modeConf.badge}`}>
             {modeConf.label}
           </span>
           {dday !== null && (
-            <span className={`text-xs font-medium ${modeConf.text}`}>D-{dday}</span>
+            <span className="text-2xl font-black text-surface-900 ml-auto">D-{dday}</span>
           )}
         </div>
-        <p className={`text-sm font-medium ${modeConf.text}`}>{modeDesc}</p>
+        <p className={`text-sm font-semibold ${modeConf.text} mb-2`}>{modeDesc}</p>
+        <p className="text-xs text-surface-500 leading-relaxed">{modeReason}</p>
+        {weakness3[0] && (
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/60">
+            <span className="text-xs text-surface-500">우선 교정</span>
+            <span className="text-xs font-bold text-surface-900">
+              {weakness3[0]?.tag || weakness3[0]}
+            </span>
+          </div>
+        )}
         {mode === 'unknown' && (
           <button
             type="button"
@@ -214,70 +223,54 @@ const StrategyPage = () => {
         )}
       </div>
 
-      {/* ── 섹션2.5: 왜 이 전략인가 설명 카드 ── */}
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
-        <p className="text-xs font-bold text-gray-500 mb-1">왜 이 전략인가요?</p>
-        <p className="text-sm text-gray-700">{modeReason}</p>
-        {weakness3[0] && (
-          <p className="text-xs text-gray-500 mt-2">
-            현재 가장 큰 손실 약점:{' '}
-            <strong>{weakness3[0]?.tag || weakness3[0]}</strong>
-            부터 우선 교정합니다.
-          </p>
-        )}
-      </div>
-
-      {/* ── 섹션3: 지금 우선 교정할 약점 ── */}
-      {user && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <PriorityWeaknessSection userId={user.id} />
+      {/* ── CTA 버튼: 모드 카드 바로 아래 ── */}
+      {subscribed && (
+        <div>
+          {strategy?.lastAnalyzedAt && (
+            <p className="text-xs text-surface-400 mb-1.5 text-right">
+              마지막 분석: {formatLastAnalyzed(strategy.lastAnalyzedAt)}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleAnalyze}
+            disabled={analyzing}
+            className="w-full py-4 rounded-2xl bg-primary-600 text-white font-bold text-base disabled:opacity-50 hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200"
+          >
+            {analyzing ? '분석 중…' : strategy ? '🔄 전략 새로고침' : '⚡ AI 전략 분석 시작'}
+          </button>
+          {error && <p className="text-xs text-red-500 mt-2 text-center">{error}</p>}
         </div>
       )}
 
       {/* ── 비구독자 안내 ── */}
       {!subscribed && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-          <p className="text-sm font-medium text-amber-800">
+        <div className="bg-surface-50 border border-surface-200 rounded-2xl p-4 text-center">
+          <p className="text-sm font-medium text-surface-700 mb-2">
             AI 집중 블록 분석은 유료 구독 후 이용할 수 있어요
           </p>
           <button
             type="button"
             onClick={() => navigate('/settings?pay=1')}
-            className="mt-2 text-xs font-medium text-amber-700 underline"
+            className="text-xs font-bold text-primary-600 underline"
           >
             설정에서 결제하기 →
           </button>
         </div>
       )}
 
+      {/* ── 약점 코칭 카드 섹션 ── */}
+      {user && (
+        <div className="bg-white rounded-2xl border border-surface-200 p-4">
+          <p className="text-xs font-black text-surface-400 uppercase tracking-wide mb-3">
+            지금 우선 교정할 약점
+          </p>
+          <PriorityWeaknessSection userId={user.id} />
+        </div>
+      )}
+
       {/* ── 구독자 전용: AI 분석 결과 ── */}
-      {subscribed && (
-        <>
-          {/* 분석 버튼 */}
-          <div>
-            {strategy?.lastAnalyzedAt && (
-              <p className="text-xs text-gray-400 mb-1 text-right">
-                마지막 분석: {formatLastAnalyzed(strategy.lastAnalyzedAt)}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={analyzing}
-              className="w-full py-3 px-4 rounded-xl bg-primary-600 text-white font-medium disabled:opacity-50"
-            >
-              {analyzing ? '분석 중…' : strategy ? '전략 새로고침' : '전략 분석 시작'}
-            </button>
-            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
-          </div>
-
-          {!strategy && !analyzing && (
-            <p className="text-sm text-gray-400 text-center py-4">
-              위 버튼을 눌러 AI 전략을 분석해 보세요
-            </p>
-          )}
-
-          {strategy && (
+      {subscribed && strategy && (
             <div className="space-y-4">
 
               {/* ── 섹션4: 집중 블록 ── */}
@@ -294,22 +287,22 @@ const StrategyPage = () => {
 
               {/* 핵심 약점 교정 블록 */}
               {strategy.priorityFocus && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="bg-white rounded-xl border border-surface-200 p-4">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
                     핵심 약점 교정 블록
                   </p>
-                  <p className="text-gray-900 text-sm font-medium">{strategy.priorityFocus}</p>
+                  <p className="text-surface-900 text-sm font-medium">{strategy.priorityFocus}</p>
                 </div>
               )}
 
               {/* RC 시간 압축 블록 */}
               {strategy.rcTimeAllocation && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="bg-white rounded-xl border border-surface-200 p-4">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
                     RC 시간 손실 압축 블록
                   </p>
                   {strategy.rcStrategyText && (
-                    <p className="text-sm text-gray-800 mb-3">{strategy.rcStrategyText}</p>
+                    <p className="text-sm text-surface-800 mb-3">{strategy.rcStrategyText}</p>
                   )}
                   <div className="space-y-2">
                     {[
@@ -318,21 +311,21 @@ const StrategyPage = () => {
                       { label: 'Part 7', key: 'part7', color: 'bg-primary-600' },
                     ].map(({ label, key, color }) => (
                       <div key={key} className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700 w-14">{label}</span>
-                        <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
+                        <span className="text-sm text-surface-700 w-14">{label}</span>
+                        <div className="flex-1 h-5 bg-surface-100 rounded overflow-hidden">
                           <div
                             className={`h-full ${color}`}
                             style={{ width: `${((strategy.rcTimeAllocation[key] || 0) / 75) * 100}%` }}
                           />
                         </div>
-                        <span className="text-sm font-medium text-gray-900 w-10">
+                        <span className="text-sm font-medium text-surface-900 w-10">
                           {strategy.rcTimeAllocation[key]}분
                         </span>
                       </div>
                     ))}
                   </div>
                   {!strategy.rcStrategyText && (
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-surface-400 mt-2">
                       Part 5·6에서 시간 확보 후 Part 7에 충분히 배분하세요.
                     </p>
                   )}
@@ -341,11 +334,11 @@ const StrategyPage = () => {
 
               {/* 학습 루틴 블록 */}
               {strategy.dailyPlan && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="bg-white rounded-xl border border-surface-200 p-4">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
                     학습 루틴 블록
                   </p>
-                  <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">
+                  <p className="text-surface-800 text-sm whitespace-pre-wrap leading-relaxed">
                     {strategy.dailyPlan}
                   </p>
                 </div>
@@ -353,13 +346,13 @@ const StrategyPage = () => {
 
               {/* 실전 팁 */}
               {strategy.specificTips && strategy.specificTips.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="bg-white rounded-xl border border-surface-200 p-4">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
                     실전 핵심 팁
                   </p>
                   <ul className="space-y-2">
                     {strategy.specificTips.map((tip, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-800">
+                      <li key={i} className="flex items-start gap-2 text-sm text-surface-800">
                         <span className="text-primary-400 mt-0.5 flex-shrink-0">•</span>
                         <span>{tip}</span>
                       </li>
@@ -380,16 +373,21 @@ const StrategyPage = () => {
 
               {/* ── 섹션5: AI 코치 한 줄 ── */}
               {strategy.weeklyGoal && (
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                <div className="bg-surface-50 rounded-xl border border-surface-200 p-4">
                   <div className="flex items-start gap-2">
                     <span className="text-lg flex-shrink-0">💬</span>
-                    <p className="text-sm text-gray-700 leading-relaxed">{strategy.weeklyGoal}</p>
+                    <p className="text-sm text-surface-700 leading-relaxed">{strategy.weeklyGoal}</p>
                   </div>
                 </div>
               )}
             </div>
-          )}
-        </>
+      )}
+
+      {/* 위 버튼을 눌러서... 안내는 구독 중이고 분석 결과가 없을 때만 */}
+      {subscribed && !strategy && !analyzing && (
+        <p className="text-sm text-surface-400 text-center py-2">
+          위 버튼을 눌러 AI 전략을 분석해 보세요
+        </p>
       )}
     </div>
   )

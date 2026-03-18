@@ -130,62 +130,75 @@ export default function CoachingPage() {
     <div className="p-4 pb-8 space-y-4">
       {/* 헤드라인 */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">오늘의 코칭</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-surface-900">오늘의 코칭</h1>
+        <p className="text-sm text-surface-500 mt-1">
           지금 상태 → 오늘 할 일 → 약점 우선순위
         </p>
       </div>
 
-      {/* 점수 요약 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-end justify-between">
+      {/* Hero Score 카드 */}
+      <div className="rounded-2xl bg-gradient-to-br from-primary-900 to-primary-700 p-5 text-white shadow-lg">
+        <div className="flex items-end justify-between mb-4">
           <div>
-            <p className="text-xs text-gray-500">현재 예상 점수</p>
-            <p className="text-2xl font-bold text-gray-900">
-              {dashboard?.predicted_score != null ? `${dashboard.predicted_score}점` : '—'}
+            <p className="text-xs text-primary-300 font-medium mb-1">현재 예상 점수</p>
+            <p className="text-4xl font-black text-white leading-none">
+              {dashboard?.predicted_score != null ? dashboard.predicted_score : '—'}
+              <span className="text-lg font-medium text-primary-300 ml-1">점</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-500">목표 점수</p>
-            <p className="text-lg font-bold text-primary-700">
+            <p className="text-xs text-primary-300 mb-1">목표</p>
+            <p className="text-2xl font-bold text-accent-400">
               {dashboard?.target_score != null ? `${dashboard.target_score}점` : '900점'}
             </p>
           </div>
         </div>
-        <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-primary-300">
           <span>오답 {wrongCount}개</span>
-          {dday != null && dday >= 0 && <span>시험까지 D-{dday}</span>}
+          {dday != null && dday >= 0 && (
+            <>
+              <span>·</span>
+              <span className="text-accent-400 font-bold">D-{dday}</span>
+            </>
+          )}
+          {dashboard?.predicted_score != null && dashboard?.target_score != null && (
+            <span className="ml-auto text-score-500 font-bold text-sm">
+              +{dashboard.target_score - dashboard.predicted_score}점 필요
+            </span>
+          )}
         </div>
         {dday == null && (
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            className="mt-3 text-xs font-medium text-primary-600 underline"
+            className="mt-3 text-xs font-medium text-primary-300 underline hover:text-white"
           >
-            시험일 입력하면 압축 모드가 계산돼요 →
+            시험일 입력하면 D-day 압축 전략이 계산돼요 →
           </button>
         )}
       </div>
 
       {/* 오늘 할 일 3개 */}
-      <div className="bg-primary-50 rounded-xl border border-primary-100 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-primary-900">오늘 할 일 3개</h2>
+      <div className="bg-surface-50 rounded-2xl border border-surface-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-black text-surface-900">오늘 할 일 3개</h2>
           {!sub.paid && (
             <button
               type="button"
               onClick={() => navigate('/settings?pay=1')}
-              className="text-xs font-semibold text-primary-700 underline"
+              className="text-xs font-semibold text-primary-600 underline"
             >
               Pro로 더 정확히 →
             </button>
           )}
         </div>
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {actions.map((a, idx) => (
-            <li key={idx} className="flex items-start gap-2 text-sm text-primary-900">
-              <span className="text-primary-600 font-bold">{idx + 1}</span>
-              <span>{a}</span>
+            <li key={idx} className="flex items-start gap-3 pl-3 border-l-2 border-accent-400">
+              <span className="text-accent-500 font-black text-base leading-none mt-0.5 w-4 shrink-0">
+                {idx + 1}
+              </span>
+              <span className="text-sm text-surface-900 leading-snug">{a}</span>
             </li>
           ))}
         </ul>
@@ -193,7 +206,7 @@ export default function CoachingPage() {
           <button
             type="button"
             onClick={() => navigate('/stats')}
-            className="mt-2 text-xs font-medium text-primary-700 underline"
+            className="mt-3 text-xs font-medium text-primary-600 underline"
           >
             체크리스트 근거 보기 →
           </button>
@@ -201,22 +214,22 @@ export default function CoachingPage() {
         <button
           type="button"
           onClick={() => navigate('/strategy')}
-          className="mt-3 w-full py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold"
+          className="mt-4 w-full py-3 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors"
         >
           이번 주 전략 보기 →
         </button>
       </div>
 
       {/* 약점 TOP3 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900">가장 위험한 약점 TOP3</h2>
+      <div className="bg-white rounded-2xl border border-surface-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-black text-surface-900">가장 위험한 약점 TOP3</h2>
           <button type="button" onClick={() => navigate('/stats')} className="text-xs text-primary-600 font-medium">
             근거 보기 →
           </button>
         </div>
         {top3.length === 0 ? (
-          <p className="text-sm text-gray-400 py-2">오답을 쌓으면 약점 우선순위가 자동으로 잡혀요.</p>
+          <p className="text-sm text-surface-400 py-2">오답을 쌓으면 약점 우선순위가 자동으로 잡혀요.</p>
         ) : (
           <div className="space-y-2">
             {top3.slice(0, 3).map((w, idx) => {
@@ -224,33 +237,52 @@ export default function CoachingPage() {
               const hasTime = typeof w === 'object' && w ? !!w.hasTimePressure : false
               const count = typeof w === 'object' && w ? w.count : null
               return (
-              <div key={name || idx} className="flex items-center justify-between rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
-                <span className="text-sm font-medium text-gray-800">
-                  {idx + 1}. {name}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {hasTime ? '⏱ 시간' : '오답'} · {count ?? '-'}회
-                </span>
-              </div>
+                <div
+                  key={name || idx}
+                  className={`flex items-center justify-between rounded-xl px-3 py-2.5 border-l-4 ${
+                    idx === 0
+                      ? 'bg-accent-50 border-l-accent-500 border border-accent-100'
+                      : 'bg-surface-50 border-l-surface-300 border border-surface-200'
+                  }`}
+                >
+                  <span className={`text-sm font-semibold ${idx === 0 ? 'text-surface-900' : 'text-surface-700'}`}>
+                    {idx + 1}. {name}
+                  </span>
+                  <span className="text-xs text-surface-500">
+                    {hasTime ? '⏱ 시간' : '오답'} · {count ?? '-'}회
+                  </span>
+                </div>
               )
             })}
           </div>
         )}
       </div>
 
-      {/* Pro 미리보기 */}
+      {/* Pro 업그레이드 카드 */}
       {!sub.paid && (
-        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
-          <p className="text-sm font-semibold text-amber-900 mb-1">Pro에서 달라지는 것</p>
-          <ul className="text-sm text-amber-800 space-y-1 mb-3">
-            <li>• 구간 리포트로 "내가 오르는 근거"를 기록</li>
-            <li>• D-day 압축 전략으로 "지금 버릴 것/할 것"을 명확히</li>
-            <li>• 무제한 오답 분석 + AI 코치 심화</li>
+        <div className="rounded-2xl bg-primary-900 text-white p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-accent-400 font-black text-xs uppercase tracking-widest">Pro</span>
+            <span className="text-primary-400 text-xs">에서 달라지는 것</span>
+          </div>
+          <ul className="space-y-2 mb-4">
+            <li className="text-sm text-primary-200 flex items-start gap-2">
+              <span className="text-score-500 shrink-0">✓</span>
+              구간 리포트로 "내가 오르는 근거" 기록
+            </li>
+            <li className="text-sm text-primary-200 flex items-start gap-2">
+              <span className="text-score-500 shrink-0">✓</span>
+              D-day 압축 전략 — 지금 버릴 것/할 것 명확히
+            </li>
+            <li className="text-sm text-primary-200 flex items-start gap-2">
+              <span className="text-score-500 shrink-0">✓</span>
+              무제한 오답 분석 + AI 코치 심화
+            </li>
           </ul>
           <button
             type="button"
             onClick={() => navigate('/settings?pay=1')}
-            className="w-full py-2.5 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600"
+            className="w-full py-3 rounded-xl bg-accent-500 text-white text-sm font-bold hover:bg-accent-600 transition-colors"
           >
             Pro로 업그레이드하기
           </button>
@@ -261,7 +293,7 @@ export default function CoachingPage() {
       <button
         type="button"
         onClick={() => navigate('/notes')}
-        className="w-full py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        className="w-full py-3 rounded-xl border border-surface-200 bg-white text-sm font-semibold text-surface-700 hover:bg-surface-50"
       >
         내 오답노트(노트)로 가기 →
       </button>

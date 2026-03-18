@@ -12,9 +12,9 @@ const PART_LABELS = { 1: 'Part 1', 2: 'Part 2', 3: 'Part 3', 4: 'Part 4', 5: 'Pa
 const CHART_COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a']
 const RANK_LABELS = ['1위', '2위', '3위']
 const RANK_COLORS = [
-  { bg: 'bg-red-50',   text: 'text-red-600',   badge: 'bg-red-100 text-red-700'   },
-  { bg: 'bg-amber-50', text: 'text-amber-600',  badge: 'bg-amber-100 text-amber-700' },
-  { bg: 'bg-blue-50',  text: 'text-blue-600',   badge: 'bg-blue-100 text-blue-700'  },
+  { bg: 'bg-accent-50', text: 'text-accent-600', badge: 'bg-accent-100 text-accent-700' },
+  { bg: 'bg-surface-50', text: 'text-surface-700', badge: 'bg-surface-200 text-surface-700' },
+  { bg: 'bg-surface-50', text: 'text-surface-600', badge: 'bg-surface-200 text-surface-600' },
 ]
 
 const StatsPage = () => {
@@ -140,8 +140,8 @@ const StatsPage = () => {
           {/* 파트 순위 TOP 3 배지 */}
           {totalWrong === 0 ? (
             <div className="bg-gray-50 rounded-xl p-8 text-center mb-4">
-              <p className="text-gray-400 text-sm">아직 오답 데이터가 없어요</p>
-              <p className="text-gray-300 text-xs mt-1">카메라로 오답을 등록하면 분석이 시작돼요</p>
+              <p className="text-surface-400 text-sm">아직 분석할 데이터가 없어요. 오답을 추가하면 자동으로 잡혀요.</p>
+              <p className="text-surface-400 text-xs mt-1">카메라로 오답을 등록하면 분석이 시작돼요</p>
             </div>
           ) : (
             <>
@@ -150,7 +150,7 @@ const StatsPage = () => {
                 {partRanking.slice(0, 3).map((item, idx) => {
                   const col = RANK_COLORS[idx]
                   return (
-                    <div key={item.part} className={`${col.bg} rounded-xl p-3 text-center`}>
+                    <div key={item.part} className={`${col.bg} rounded-xl p-3 text-center ${idx === 0 ? 'border-l-4 border-l-accent-500' : ''}`}>
                       <span className={`text-xs font-bold ${col.badge} px-2 py-0.5 rounded-full`}>
                         {RANK_LABELS[idx]}
                       </span>
@@ -162,7 +162,7 @@ const StatsPage = () => {
               </div>
 
               {/* 전체 파트 목록 (순위별) */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+              <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
                 <h3 className="font-semibold text-gray-900 mb-3">파트별 오답 수 (전체)</h3>
                 <div className="space-y-2">
                   {partRanking.map((item, idx) => {
@@ -187,7 +187,7 @@ const StatsPage = () => {
               </div>
 
               {/* 파트별 분포 PieChart */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+              <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
                 <h3 className="font-semibold text-gray-900 mb-3">파트별 오답 분포</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
@@ -210,7 +210,7 @@ const StatsPage = () => {
               </div>
 
               {/* LC vs RC */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4">
                 <h3 className="font-semibold text-gray-900 mb-3">LC vs RC</h3>
                 <div className="space-y-3">
                   <div className="flex gap-2 items-center">
@@ -253,11 +253,11 @@ const StatsPage = () => {
           </div>
 
           {/* 총 오답 + 점수 카드 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-5 mb-4">
             <div className="flex justify-between items-start mb-3">
               <div>
                 <p className="text-xs text-gray-500 mb-0.5">총 오답 수</p>
-                <p className="text-3xl font-bold text-primary-600">{totalWrong}개</p>
+                <p className="text-2xl font-black text-primary-600">{totalWrong}개</p>
               </div>
               {currentScore != null && (
                 <div className="text-right">
@@ -267,7 +267,7 @@ const StatsPage = () => {
               )}
             </div>
             {estimatedScore != null ? (
-              <div className="border-t border-gray-100 pt-3">
+              <div className="border-t border-surface-100 pt-3">
                 <p className="text-xs text-gray-500 mb-0.5">오답 기반 추정 점수</p>
                 <p className="text-xl font-bold text-gray-700">{estimatedScore}점</p>
                 <p className="text-xs text-gray-400 mt-0.5">
@@ -275,17 +275,17 @@ const StatsPage = () => {
                 </p>
               </div>
             ) : totalWrong > 0 && (
-              <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400 border-t border-surface-100 pt-3">
                 💡 오답을 50개 이상 기록하면 추정 점수를 계산할 수 있어요. (현재 {totalWrong}개)
               </p>
             )}
           </div>
 
           {/* 취약 태그 TOP 5 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
             <h3 className="font-semibold text-gray-900 mb-3">취약 태그 TOP 5</h3>
             {totalWrong === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">아직 오답 데이터가 없어요</p>
+              <p className="text-sm text-surface-400 text-center py-6">아직 분석할 데이터가 없어요. 오답을 추가하면 자동으로 잡혀요.</p>
             ) : tagChartData.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-6">
                 오답은 있는데 태그가 비어있어요. 저장할 때 태그를 선택하면 취약 태그가 더 정확해져요.
@@ -314,7 +314,7 @@ const StatsPage = () => {
 
           {/* Part 5 문법 약점 (유료) */}
           {subscribed && segmentStats?.part5Grammar?.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+            <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
               <h3 className="font-semibold text-gray-900 mb-3">Part 5 문법 약점</h3>
               <p className="text-xs text-gray-500 mb-3">
                 저장한 Part 5 오답 {segmentStats.totalPart5 || 0}개 기준 · 아래 유형에서 오답이 많아요
@@ -340,7 +340,7 @@ const StatsPage = () => {
 
           {/* Part 7 평균 풀이 시간 (유료) */}
           {subscribed && segmentStats?.avgPart7TimeSeconds != null && segmentStats.avgPart7TimeSeconds > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+            <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
               <h3 className="font-semibold text-gray-900 mb-2">Part 7 평균 풀이 시간</h3>
               <p className="text-2xl font-bold text-primary-600">
                 {segmentStats.avgPart7TimeSeconds >= 60
@@ -353,7 +353,7 @@ const StatsPage = () => {
 
           {/* Part 7 유형별 오답 (유료) */}
           {subscribed && (segmentStats?.part7Passage?.length > 0 || segmentStats?.part7QuestionType?.length > 0) && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+            <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
               <h3 className="font-semibold text-gray-900 mb-3">Part 7 유형별 오답</h3>
               <p className="text-xs text-gray-500 mb-1">지문/질문 유형별 집계</p>
               <p className="text-xs text-gray-500 mb-3">Part 7 오답 {segmentStats.totalPart7 || 0}개 기준</p>
@@ -404,7 +404,7 @@ const StatsPage = () => {
 
           {/* Part 2 패턴 / 답 유형 (유료) */}
           {subscribed && (segmentStats?.part2Pattern?.length > 0 || segmentStats?.part2AnswerType?.length > 0) && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+            <div className="bg-white rounded-xl shadow-sm border border-surface-200 p-4 mb-4">
               <h3 className="font-semibold text-gray-900 mb-3">Part 2 패턴·답 유형</h3>
               <p className="text-xs text-gray-500 mb-3">질문 패턴/답 유형별 집계</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

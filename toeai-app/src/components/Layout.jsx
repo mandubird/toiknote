@@ -158,31 +158,34 @@ const Layout = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* 상단 헤더 */}
-      <header className="bg-white border-b border-gray-200 safe-area-top">
+    <div className="flex flex-col h-screen bg-surface-50">
+      {/* 상단 헤더 — 네이비 다크 */}
+      <header className="bg-primary-900 safe-area-top">
         <div className="px-4 py-3 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold flex items-baseline gap-1.5">
-              <span className="text-primary-600">토답</span>
-              <span className="text-sm font-medium text-gray-500">
-                — <span className="text-primary-600 font-bold">토</span>익 성적 향상의 정<span className="text-primary-600 font-bold">답</span>
+            <h1 className="text-lg font-black tracking-tight flex items-baseline gap-0.5">
+              <span className="text-accent-400">토</span>
+              <span className="text-white">답</span>
+              <span className="text-xs font-medium text-primary-300 ml-1.5">
+                — <span className="text-accent-400">토</span>익 성적 향상의 정<span className="text-accent-400">답</span>
               </span>
             </h1>
-            <p className="text-xs text-gray-400">약점 진단 · 점수 손실 분석 · 압축 전략</p>
+            <p className="text-[10px] text-primary-400 tracking-wide mt-0.5">
+              약점 진단 · 점수 손실 분석 · 압축 전략
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/reviews')}
-              className="text-sm font-medium text-gray-600 hover:underline"
+              className="text-xs font-medium text-primary-300 hover:text-white transition-colors"
             >
               후기
             </button>
             <button
               type="button"
               onClick={() => navigate('/landing')}
-              className="text-sm font-medium text-primary-600 hover:underline"
+              className="text-xs font-bold px-3 py-1.5 rounded-full bg-accent-500 text-white hover:bg-accent-600 transition-colors"
             >
               900 점프
             </button>
@@ -190,33 +193,36 @@ const Layout = () => {
         </div>
       </header>
 
-      {/* 무료 체험 상태 배너 (미결제 사용자) */}
+      {/* 무료 체험 배너 (미결제 사용자) */}
       {user && !isPaid && trialInfo && (
-        <div className={`px-4 py-2.5 text-center text-sm ${
-          trialInfo.trialExpired
-            ? 'bg-red-50 border-b border-red-200 text-red-700'
-            : 'bg-amber-50 border-b border-amber-200 text-amber-800'
-        }`}>
-          {trialInfo.trialExpired ? (
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span>무료 체험이 종료되었습니다</span>
-              <button
-                type="button"
-                onClick={() => navigate('/settings?pay=1')}
-                className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
-              >
-                결제하기
-              </button>
+        trialInfo.trialExpired ? (
+          <div className="px-4 py-2.5 bg-accent-500 text-white flex items-center justify-center gap-3">
+            <span className="text-sm font-semibold">⏰ 무료 체험이 종료되었어요</span>
+            <button
+              type="button"
+              onClick={() => navigate('/settings?pay=1')}
+              className="px-3 py-1 rounded-full bg-white text-accent-600 text-xs font-black"
+            >
+              지금 시작하기
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="h-1 bg-surface-100">
+              <div
+                className="h-full bg-accent-400 transition-all"
+                style={{ width: `${Math.min((trialInfo.questionsUsed / freeLimit) * 100, 100)}%` }}
+              />
             </div>
-          ) : (
-            <span>
-              무료 체험 <strong>{trialInfo.questionsUsed}/{freeLimit}문제</strong> 사용
-              {trialInfo.trialStartedAt && (
-                <> · 체험 종료까지 <strong>{trialInfo.daysLeft}일</strong> 남음</>
+            <div className="px-4 py-1.5 bg-accent-50 text-center text-xs text-surface-600">
+              무료 체험{' '}
+              <strong className="text-surface-900">{trialInfo.questionsUsed}/{freeLimit}문제</strong>
+              {trialInfo.daysLeft != null && (
+                <> · <strong className="text-accent-600">{trialInfo.daysLeft}일</strong> 남음</>
               )}
-            </span>
-          )}
-        </div>
+            </div>
+          </>
+        )
       )}
 
       {/* 메인 콘텐츠 — 카메라 버튼 표시 화면에서는 추가 패딩 */}
@@ -273,8 +279,8 @@ const Layout = () => {
         onPaymentSuccess={() => setShowPaywall(false)}
       />
 
-      {/* 하단 탭바 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom">
+      {/* 하단 탭바 — 활성 인디케이터 */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-surface-200 safe-area-bottom">
         <div className="grid grid-cols-5 h-16">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -286,17 +292,23 @@ const Layout = () => {
               (tab.path === '/strategy' &&
                 (p.startsWith('/strategy') || p.startsWith('/program') || p.startsWith('/week') || p.startsWith('/report'))) ||
               (tab.path === '/settings' && p.startsWith('/settings'))
-            
+
             return (
               <button
                 key={tab.path}
+                type="button"
                 onClick={() => navigate(tab.path)}
-                className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                  isActive ? 'text-primary-600' : 'text-gray-400'
+                className={`relative flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                  isActive ? 'text-primary-600' : 'text-surface-400'
                 }`}
               >
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium">{tab.label}</span>
+                <Icon className="w-5 h-5" />
+                <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-600 rounded-t-full" />
+                )}
               </button>
             )
           })}
