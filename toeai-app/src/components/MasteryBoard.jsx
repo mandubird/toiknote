@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getMasteryBoard, setUserOverride } from '../services/masteryService'
+import { fetchTagStats } from '../services/fetchTagStats'
 
 // ── 상태별 UI 설정 ────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -158,12 +159,38 @@ function MasteryCard({ item, userId, onOverrideChange }) {
 export default function MasteryBoard({ userId }) {
   const [items, setItems]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [fallback, setFallback] = useState(null)
 
   const load = useCallback(async () => {
     if (!userId) return
     setLoading(true)
     const data = await getMasteryBoard(userId)
     setItems(data)
+    setFallback(null)
+
+    // user_tag_stats 기반 데이터가 비어있으면, tag_stats(=오답 집계) 기반으로 임시 체크리스트 제공
+    if (!data?.length) {
+      const stats = await fetchTagStats(userId).catch(() => null)
+      const totalWrong = stats?.totalWrong || 0
+      if (totalWrong >= 3) {
+        const top = Object.entries(stats?.tagCounts || {})
+          .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+          .slice(0, 12)
+          .map(([name, count]) => ({
+            code: name,
+            name,
+            status: count >= 5 ? 'in_progress' : 'not_started',
+            autoScore: 0,
+            totalAttempts: count,
+            accuracyRate: 0,
+            userOverride: null,
+            coachHint: count >= 5 ? '오답이 많이 쌓였어요. 이 태그부터 집중 공략하세요.' : '데이터가 더 쌓이면 자동 체크리스트가 정교해져요.',
+          }))
+        setFallback({ totalWrong, items: top })
+      } else if (totalWrong > 0) {
+        setFallback({ totalWrong, items: [] })
+      }
+    }
     setLoading(false)
   }, [userId])
 
@@ -178,6 +205,68 @@ export default function MasteryBoard({ userId }) {
   }
 
   if (!items.length) {
+    if (fallback?.totalWrong > 0 && fallback?.items?.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: 48 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+          <p style={{ color: '#6B7280', fontSize: 14, lineHeight: 1.6 }}>
+            오답은 <strong>{fallback.totalWrong}개</strong> 있는데,<br />
+            체크리스트용 집계 데이터가 아직 준비되지 않았어요.
+          </p>
+          <button
+            type="button"
+            onClick={load}
+            style={{
+              marginTop: 14,
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: '#1D4ED8',
+              color: '#fff',
+              border: 'none',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            다시 불러오기
+          </button>
+          <p style={{ marginTop: 10, color: '#9CA3AF', fontSize: 11 }}>
+            보통 새 버전 전환/데이터 마이그레이션 시 일시적으로 발생할 수 있어요.
+          </p>
+        </div>
+      )
+    }
+
+    if (fallback?.items?.length > 0) {
+      return (
+        <div style={{ padding: '0 4px' }}>
+          <div style={{
+            background: '#FFFBEB',
+            border: '1px solid #FDE68A',
+            borderRadius: 14,
+            padding: '12px 14px',
+            marginBottom: 12,
+            color: '#92400E',
+            fontSize: 12,
+            lineHeight: 1.5,
+          }}>
+            <strong>임시 체크리스트(태그 기반)</strong>예요. 현재 오답 {fallback.totalWrong}개를 기준으로 상위 태그를 보여줘요.
+          </div>
+          {fallback.items.map((item) => (
+            <MasteryCard
+              key={item.code}
+              item={item}
+              userId={userId}
+              onOverrideChange={load}
+            />
+          ))}
+          <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
+            이후 `user_tag_stats` 집계가 채워지면 자동 체크리스트로 전환돼요
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div style={{ textAlign: 'center', padding: 48 }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>

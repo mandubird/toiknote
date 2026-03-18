@@ -13,6 +13,7 @@ const LandingPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [hasDiagnosed, setHasDiagnosed] = useState(false)
+  const [proofs, setProofs] = useState([])
 
   // 로그인 유저의 진단 완료 여부 확인
   useEffect(() => {
@@ -26,6 +27,20 @@ const LandingPage = () => {
         setHasDiagnosed(!!data?.program_status && data.program_status !== 'none')
       })
   }, [user])
+
+  // 공개된 proof_assets 6개까지 랜딩에 노출
+  useEffect(() => {
+    supabase
+      .from('proof_assets')
+      .select('*')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(6)
+      .then(({ data, error }) => {
+        if (error) return
+        setProofs(data || [])
+      })
+  }, [])
 
   const scrollToPricing = () => {
     document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
@@ -322,6 +337,36 @@ const LandingPage = () => {
               </p>
             </div>
           </div>
+
+          {/* proof_assets 기반 실제 증거 섹션 */}
+          {proofs.length > 0 && (
+            <div className="mt-12">
+              <h3 className="text-center text-xl font-bold text-gray-900 mb-4">실제 사용자 후기/인사이트</h3>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {proofs.map((p) => (
+                  <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
+                    <div className="mb-1 text-xs font-semibold text-gray-500 uppercase">
+                      {p.type === 'review'
+                        ? '후기'
+                        : p.type === 'before_after'
+                        ? '점수 전후 비교'
+                        : '인사이트'}
+                    </div>
+                    {p.image_url && (
+                      <div className="mb-2">
+                        <img src={p.image_url} alt="" className="w-full rounded-lg object-cover max-h-40" />
+                      </div>
+                    )}
+                    {p.content && (
+                      <p className="text-xs leading-relaxed whitespace-pre-line line-clamp-5">
+                        {p.content}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

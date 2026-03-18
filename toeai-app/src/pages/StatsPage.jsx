@@ -6,6 +6,7 @@ import { fetchSegmentStats } from '../services/fetchSegmentStats'
 import { getSubscription } from '../services/subscription'
 import { getUserProfile } from '../services/userProfile'
 import MasteryBoard from '../components/MasteryBoard'
+import WeaknessInsightCard from '../components/stats/WeaknessInsightCard'
 
 const PART_LABELS = { 1: 'Part 1', 2: 'Part 2', 3: 'Part 3', 4: 'Part 4', 5: 'Part 5', 6: 'Part 6', 7: 'Part 7' }
 const CHART_COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a']
@@ -18,7 +19,7 @@ const RANK_COLORS = [
 
 const StatsPage = () => {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('mastery')
+  const [activeTab, setActiveTab] = useState('tags')
   const [tagStats, setTagStats] = useState(null)
   const [segmentStats, setSegmentStats] = useState(null)
   const [subscribed, setSubscribed] = useState(false)
@@ -81,17 +82,30 @@ const StatsPage = () => {
         .slice(0, 5)
     : []
 
+  const topTag = tagChartData?.[0] ?? null
+
   const lcPct = totalWrong > 0 ? Math.round((lcWrong / totalWrong) * 100) : 50
   const rcPct = totalWrong > 0 ? Math.round((rcWrong / totalWrong) * 100) : 50
 
   const TABS = [
-    { key: 'mastery', label: '체크리스트' },
-    { key: 'parts',   label: '취약 파트'  },
     { key: 'tags',    label: '취약 태그'  },
+    { key: 'parts',   label: '취약 파트'  },
+    { key: 'mastery', label: '체크리스트' },
   ]
 
   return (
     <div className="p-4">
+      {/* 인사이트 카드 (최상단) */}
+      {totalWrong > 0 && (
+        <div className="mb-4">
+          <WeaknessInsightCard
+            totalWrong={totalWrong}
+            topTagName={topTag?.name ?? null}
+            topTagCount={topTag?.count ?? 0}
+          />
+        </div>
+      )}
+
       {/* 탭 */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#F3F4F6', borderRadius: 12, padding: 4 }}>
         {TABS.map((tab) => (
@@ -112,12 +126,7 @@ const StatsPage = () => {
         ))}
       </div>
 
-      {/* ── 탭1: 체크리스트 ── */}
-      {activeTab === 'mastery' && (
-        <MasteryBoard userId={user?.id} />
-      )}
-
-      {/* ── 탭2: 취약 파트 ── */}
+      {/* ── 탭1: 취약 파트 ── */}
       {activeTab === 'parts' && (
         <div>
           <div className="mb-5">
@@ -129,7 +138,7 @@ const StatsPage = () => {
           </div>
 
           {/* 파트 순위 TOP 3 배지 */}
-          {partRanking.length === 0 ? (
+          {totalWrong === 0 ? (
             <div className="bg-gray-50 rounded-xl p-8 text-center mb-4">
               <p className="text-gray-400 text-sm">아직 오답 데이터가 없어요</p>
               <p className="text-gray-300 text-xs mt-1">카메라로 오답을 등록하면 분석이 시작돼요</p>
@@ -232,7 +241,7 @@ const StatsPage = () => {
         </div>
       )}
 
-      {/* ── 탭3: 취약 태그 ── */}
+      {/* ── 탭2: 취약 태그 ── */}
       {activeTab === 'tags' && (
         <div>
           <div className="mb-5">
@@ -275,8 +284,12 @@ const StatsPage = () => {
           {/* 취약 태그 TOP 5 */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
             <h3 className="font-semibold text-gray-900 mb-3">취약 태그 TOP 5</h3>
-            {tagChartData.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">아직 데이터가 없어요</p>
+            {totalWrong === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-6">아직 오답 데이터가 없어요</p>
+            ) : tagChartData.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-6">
+                오답은 있는데 태그가 비어있어요. 저장할 때 태그를 선택하면 취약 태그가 더 정확해져요.
+              </p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={tagChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
@@ -442,12 +455,23 @@ const StatsPage = () => {
           )}
 
           {/* 유료 분석이 없을 때 빈 안내 */}
-          {tagChartData.length === 0 && (
+          {totalWrong === 0 && (
             <div className="bg-gray-50 rounded-xl p-8 text-center">
               <p className="text-gray-400 text-sm">아직 태그 데이터가 없어요</p>
               <p className="text-gray-300 text-xs mt-1">오답을 등록하면 태그 분석이 시작돼요</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── 탭3: 체크리스트(참고용) ── */}
+      {activeTab === 'mastery' && (
+        <div>
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">체크리스트</h2>
+            <p className="text-sm text-gray-500">코칭 결과를 약점 탭에서 참고용으로 확인할 수 있어요</p>
+          </div>
+          <MasteryBoard userId={user?.id} />
         </div>
       )}
     </div>

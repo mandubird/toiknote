@@ -70,7 +70,7 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab]       = useState('info')
   const freeLimit = getFreeLimit()
 
-  // ?pay=1 파라미터로 진입 시 구독 탭 + 결제 시트 열기
+  // ?pay=1 파라미터로 진입 시 결제 탭 + 결제 시트 열기
   useEffect(() => {
     if (searchParams.get('pay') === '1') {
       setActiveTab('subscription')
@@ -181,7 +181,7 @@ const SettingsPage = () => {
 
   const tabs = [
     { key: 'info',         label: '내 정보' },
-    { key: 'subscription', label: '구독 · 결제' },
+    { key: 'subscription', label: '결제' },
   ]
 
   return (
@@ -355,14 +355,14 @@ const SettingsPage = () => {
           </>
         )}
 
-        {/* ══ 구독 탭 ══ */}
+        {/* ══ 결제 탭 ══ */}
         {activeTab === 'subscription' && (
           <>
-            {/* 구독 현황 */}
+            {/* 결제/이용권 현황 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">구독 현황</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">결제 현황</h3>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-700">현재 플랜</span>
+                <span className="text-sm text-gray-700">현재 이용권</span>
                 <span className={`text-sm font-semibold ${subscribed ? 'text-primary-600' : 'text-gray-500'}`}>
                   {PLAN_LABELS[plan] ?? 'FREE'}
                 </span>
@@ -384,14 +384,14 @@ const SettingsPage = () => {
               <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
                 {subscribed
                   ? `${PLAN_LABELS[plan]} 이용 중 — 무제한 오답 분석 + AI 전략 코치 활성`
-                  : 'FREE: 오답 5문제 체험. 유료 플랜: 무제한 분석 + D-day 압축 전략 + AI 코치'}
+                  : 'FREE: 오답 5문제 체험. 결제 후: 무제한 분석 + D-day 압축 전략 + AI 코치'}
               </p>
             </div>
 
-            {/* 요금제 (미구독 시) */}
+            {/* 결제 (미결제 시) */}
             {!subscribed && (
               <div id="payment-section" className="bg-primary-50 rounded-xl border border-primary-200 p-4">
-                <h3 className="font-semibold text-primary-900 mb-1">요금제</h3>
+                <h3 className="font-semibold text-primary-900 mb-1">결제</h3>
                 <p className="text-xs text-primary-700 mb-3">15일 · 30일 · 60일 플랜 중 선택하세요</p>
                 <button
                   type="button"

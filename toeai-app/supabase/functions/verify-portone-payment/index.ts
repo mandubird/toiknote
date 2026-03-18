@@ -165,6 +165,31 @@ serve(async (req) => {
       { onConflict: 'payment_id' }
     )
 
+    // 10. orders 기록 (목표 달성형 KPI용)
+    const { error: orderErr } = await supabase.from('orders').insert({
+      user_id:   userId,
+      plan_type: plan,
+      amount:    actualAmount,
+      paid_at:   new Date().toISOString(),
+    })
+    if (orderErr) {
+      console.error('orders insert 오류:', orderErr)
+      // orders는 KPI용이라 실패해도 결제 성공 자체는 유지
+    }
+
+    // 11. users 플랜 정보 업데이트 (plan_type, plan_started_at)
+    const { error: userErr } = await supabase
+      .from('users')
+      .update({
+        plan_type:       plan,
+        plan_started_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+    if (userErr) {
+      console.error('users plan 업데이트 오류:', userErr)
+      // 마찬가지로 결제 성공에는 영향 주지 않음
+    }
+
     return jsonRes({ success: true, plan, expiresAt: expiresAt.toISOString() })
 
   } catch (err) {

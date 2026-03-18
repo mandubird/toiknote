@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { getDashboardSummary } from '../services/programService'
 import { getSubscription } from '../services/subscription'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
+import { getMasteryBoard } from '../services/masteryService'
+import { supabase } from '../lib/supabase'
 
 function buildTodayActions({ top3, weeklyMission }) {
   const pickName = (x) => {
@@ -46,6 +48,7 @@ export default function CoachingPage() {
   const [dashboard, setDashboard] = useState(null)
   const [sub, setSub] = useState({ paid: false })
   const [wrongCount, setWrongCount] = useState(0)
+  const [checklist, setChecklist] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -57,15 +60,38 @@ export default function CoachingPage() {
       return
     }
     setLoading(true)
+
+    // 코칭 화면 진입 로그 (coaching_logs) — KPI용
+    supabase
+      .from('coaching_logs')
+      .insert({ user_id: user.id })
+      .catch(() => {})
+
     Promise.all([
       getDashboardSummary(user.id).catch(() => null),
       getSubscription(user.id).catch(() => ({ paid: false })),
       fetchWrongAnswers(user.id).then((list) => list?.length ?? 0).catch(() => 0),
+      getMasteryBoard(user.id).catch(() => []),
     ])
-      .then(([d, s, wc]) => {
+      .then(async ([d, s, wc, board]) => {
         setDashboard(d)
         setSub(s)
         setWrongCount(wc)
+        setChecklist(Array.isArray(board) ? board : [])
+
+        // 활성화 조건 체크:
+        // ① 약점 TOP3 확인 가능 (dashboard.weakness_top3 존재)
+        // ② 오늘 할 일 3개 확인 가능 (checklist 또는 fallback)
+        // ③ 오답 1개 이상 등록 (wrongCount > 0)
+        if (wc > 0 && (d?.weakness_top3?.length ?? 0) > 0) {
+          // 이미 활성화된 유저는 업데이트하지 않음
+          await supabase
+            .from('users')
+            .update({ activated_at: new Date().toISOString() })
+            .eq('id', user.id)
+            .is('activated_at', null)
+            .catch(() => {})
+        }
       })
       .finally(() => setLoading(false))
   }, [user?.id])
@@ -73,7 +99,14 @@ export default function CoachingPage() {
   const dday = useMemo(() => formatDday(dashboard?.examDate), [dashboard?.examDate])
   const top3 = useMemo(() => dashboard?.weakness_top3 || [], [dashboard?.weakness_top3])
   const weeklyMission = dashboard?.weekly_mission || null
-  const actions = useMemo(() => buildTodayActions({ top3, weeklyMission }), [top3, weeklyMission])
+  const actions = useMemo(() => {
+    // 체크리스트 로직 그대로 재활용:
+    // TodayAction = Checklist.slice(0, 3)
+    if (checklist?.length >= 3) {
+      return checklist.slice(0, 3).map((i) => i?.name).filter(Boolean)
+    }
+    return buildTodayActions({ top3, weeklyMission })
+  }, [checklist, top3, weeklyMission])
 
   if (loading) {
     return (
@@ -157,6 +190,15 @@ export default function CoachingPage() {
             </li>
           ))}
         </ul>
+        {checklist?.length > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate('/stats')}
+            className="mt-2 text-xs font-medium text-primary-700 underline"
+          >
+            체크리스트 근거 보기 →
+          </button>
+        )}
         <button
           type="button"
           onClick={() => navigate('/strategy')}

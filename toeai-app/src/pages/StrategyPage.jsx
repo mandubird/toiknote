@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { getSubscription } from '../services/subscription'
 import { analyzeStrategy } from '../services/analyzeStrategy'
 import { getDashboardSummary } from '../services/programService'
+import WeeklyPlanCard from '../components/strategy/WeeklyPlanCard'
+import { getMasteryBoard } from '../services/masteryService'
 
 const CACHE_MS = 24 * 60 * 60 * 1000
 
@@ -96,6 +98,7 @@ const StrategyPage = () => {
   const [strategy, setStrategy] = useState(null)
   const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState(null)
+  const [checklist, setChecklist] = useState([])
 
   useEffect(() => {
     if (!user) {
@@ -110,9 +113,11 @@ const StrategyPage = () => {
       getSubscription(uid),
       getDashboardSummary(uid),
       supabase.from('score_analytics').select('*').eq('user_id', uid).maybeSingle(),
+      getMasteryBoard(uid).catch(() => []),
     ]).then(([sub, dash, { data: d }]) => {
       setSubscribed(sub.paid)
       setDashboard(dash)
+      setChecklist([])
       if (sub.paid && d) {
         const lastAt = d.last_analyzed_at ? new Date(d.last_analyzed_at).getTime() : 0
         if (lastAt && Date.now() - lastAt < CACHE_MS) {
@@ -132,6 +137,8 @@ const StrategyPage = () => {
         }
       }
       setLoading(false)
+    }).then(([, , , board]) => {
+      setChecklist(Array.isArray(board) ? board : [])
     }).catch((err) => {
       console.error('[StrategyPage] init error:', err)
       setLoading(false)
@@ -167,6 +174,13 @@ const StrategyPage = () => {
   const modeDesc = typeof modeConf.desc === 'function' ? modeConf.desc(dday) : modeConf.desc
 
   const weakness3 = dashboard?.weakness_top3 ?? []
+  const weeklyActions = checklist?.length >= 3
+    ? checklist.slice(0, 3).map((i) => i?.name).filter(Boolean)
+    : [
+        '오늘 할 일 3개를 그대로 7일 반복(미션을 “루틴”으로 고정)',
+        '약점 TOP1 태그 15문제 집중 → 오답 원인 1줄 기록',
+        'Part 7 시간 압박이면 “시간 제한 풀이”만 추가',
+      ]
 
   return (
     <div className="p-4 space-y-4">
@@ -175,9 +189,16 @@ const StrategyPage = () => {
       <div className="mb-2">
         <h2 className="text-2xl font-bold text-gray-900">D-day 압축 전략</h2>
         <p className="text-sm text-gray-500 mt-1">
-          약점 진단 → 핵심 약점 교정 → 시험일까지 집중 관리
+          이번 주에 “무엇을/얼마나” 할지 정해서, 점수 손실부터 줄입니다
         </p>
       </div>
+
+      {/* ── 섹션1.5: WeeklyPlanCard (행동 중심) ── */}
+      <WeeklyPlanCard
+        mode={mode}
+        weakness3={weakness3}
+        actions={weeklyActions}
+      />
 
       {/* ── 섹션2: 현재 모드 카드 ── */}
       <div className={`rounded-xl border p-4 ${modeConf.bg} ${modeConf.border}`}>
@@ -245,7 +266,7 @@ const StrategyPage = () => {
             onClick={() => navigate('/settings?pay=1')}
             className="mt-2 text-xs font-medium text-amber-700 underline"
           >
-            설정에서 구독하기 →
+            설정에서 결제하기 →
           </button>
         </div>
       )}

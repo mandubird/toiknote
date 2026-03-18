@@ -73,13 +73,23 @@ CREATE POLICY "weekly_report_files_insert_own" ON public.weekly_report_files FOR
 CREATE POLICY "weekly_report_files_update_own" ON public.weekly_report_files FOR UPDATE USING (auth.uid() = user_id);
 
 -- 5) program_templates 900+ (8주)
-INSERT INTO public.program_templates (target_range, week, focus_tags, focus_parts, daily_task_count, strategy_text) VALUES
-('900+', 1, ARRAY['Part7 시간압축', '고난도 문법'], ARRAY[5, 7], 25, 'Part7 시간 압축 + Part5 고난도'),
-('900+', 2, ARRAY['함정 유형 제거', '삼중지문'], ARRAY[7], 20, '함정 유형 제거·삼중지문 속도'),
-('900+', 3, ARRAY['오답 패턴 제거', 'Paraphrasing'], ARRAY[7], 18, '오답 패턴 제거·Paraphrasing'),
-('900+', 4, ARRAY['Part7 시간압축', '추론'], ARRAY[7], 15, 'Part7 시간 압축·추론 정확도'),
-('900+', 5, ARRAY['LC 함정', 'Part2/3'], ARRAY[2, 3], 28, 'LC 함정 유형 제거'),
-('900+', 6, ARRAY['실수 제로', '시간 관리'], ARRAY[1, 2, 3, 4, 5, 6, 7], 35, '실수 제로·전체 시간 관리'),
-('900+', 7, ARRAY['모의고사 실전'], ARRAY[1, 2, 3, 4, 5, 6, 7], 40, '실전 시뮬레이션'),
-('900+', 8, ARRAY['최종 점검', '900+ 유지'], ARRAY[5, 7], 20, '900+ 돌파 최종 점검')
-ON CONFLICT (target_range, week) DO NOTHING;
+-- program_templates 테이블이 존재하는 경우에만 시드 데이터를 넣는다.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'program_templates'
+  ) THEN
+    INSERT INTO public.program_templates (target_range, week, focus_tags, focus_parts, daily_task_count, strategy_text) VALUES
+    ('900+', 1, ARRAY['Part7 시간압축', '고난도 문법'], ARRAY[5, 7], 25, 'Part7 시간 압축 + Part5 고난도'),
+    ('900+', 2, ARRAY['함정 유형 제거', '삼중지문'], ARRAY[7], 20, '함정 유형 제거·삼중지문 속도'),
+    ('900+', 3, ARRAY['오답 패턴 제거', 'Paraphrasing'], ARRAY[7], 18, '오답 패턴 제거·Paraphrasing'),
+    ('900+', 4, ARRAY['Part7 시간압축', '추론'], ARRAY[7], 15, 'Part7 시간 압축·추론 정확도'),
+    ('900+', 5, ARRAY['LC 함정', 'Part2/3'], ARRAY[2, 3], 28, 'LC 함정 유형 제거'),
+    ('900+', 6, ARRAY['실수 제로', '시간 관리'], ARRAY[1, 2, 3, 4, 5, 6, 7], 35, '실수 제로·전체 시간 관리'),
+    ('900+', 7, ARRAY['모의고사 실전'], ARRAY[1, 2, 3, 4, 5, 6, 7], 40, '실전 시뮬레이션'),
+    ('900+', 8, ARRAY['최종 점검', '900+ 유지'], ARRAY[5, 7], 20, '900+ 돌파 최종 점검')
+    ON CONFLICT (target_range, week) DO NOTHING;
+  END IF;
+END $$;
