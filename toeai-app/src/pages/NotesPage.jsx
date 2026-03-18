@@ -87,16 +87,6 @@ const NotesPage = () => {
 
   const PARTS = ['Part 1', 'Part 2', 'Part 3', 'Part 4', 'Part 5', 'Part 6', 'Part 7']
 
-const partBadgeStyle = {
-  '5': 'bg-primary-100 text-primary-700',
-  '6': 'bg-purple-100 text-purple-700',
-  '7': 'bg-accent-100 text-accent-700',
-  '1': 'bg-green-100 text-green-700',
-  '2': 'bg-teal-100 text-teal-700',
-  '3': 'bg-cyan-100 text-cyan-700',
-  '4': 'bg-sky-100 text-sky-700',
-}
-
   // 최근 3개
   const recentThree = [...questions].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3)
 
@@ -292,6 +282,17 @@ const partBadgeStyle = {
       </div>
     </div>
   )
+}
+
+// ─── 파트 배지 컬러 ────────────────────────────────────────────
+const partBadgeStyle = {
+  '5': 'bg-primary-100 text-primary-700',
+  '6': 'bg-purple-100 text-purple-700',
+  '7': 'bg-accent-100 text-accent-700',
+  '1': 'bg-green-100 text-green-700',
+  '2': 'bg-teal-100 text-teal-700',
+  '3': 'bg-cyan-100 text-cyan-700',
+  '4': 'bg-sky-100 text-sky-700',
 }
 
 // ─── 오늘 요약 카드 ────────────────────────────────────────────
