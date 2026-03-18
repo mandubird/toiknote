@@ -6,6 +6,7 @@ import { getSubscription } from '../services/subscription'
 import { analyzeStrategy } from '../services/analyzeStrategy'
 import { getDashboardSummary } from '../services/programService'
 import WeeklyPlanCard from '../components/strategy/WeeklyPlanCard'
+import PriorityWeaknessSection from '../components/strategy/PriorityWeaknessSection'
 import { getMasteryBoard } from '../services/masteryService'
 
 const CACHE_MS = 24 * 60 * 60 * 1000
@@ -223,37 +224,12 @@ const StrategyPage = () => {
         )}
       </div>
 
-      {/* ── 섹션3: 지금 먼저 고쳐야 할 영역 ── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">지금 먼저 고쳐야 할 영역</h3>
-        {weakness3.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-3">
-            오답을 10개 이상 등록하면 약점 영역이 분석돼요
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {weakness3.slice(0, 3).map((item, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-2 bg-red-50 rounded-lg px-3 py-2"
-              >
-                <span className="text-red-500 font-bold text-sm mt-0.5">{i + 1}</span>
-                <div>
-                  <p className="text-sm font-medium text-red-800">
-                    {typeof item === 'string' ? item : item.tag}
-                    {typeof item === 'object' && item.count > 0 && (
-                      <span className="ml-1 text-xs text-red-400">({item.count}개)</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-red-600 mt-0.5">
-                    지금은 이 영역을 먼저 줄이는 게 점수 효율이 높아요
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ── 섹션3: 지금 우선 교정할 약점 ── */}
+      {user && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <PriorityWeaknessSection userId={user.id} />
+        </div>
+      )}
 
       {/* ── 비구독자 안내 ── */}
       {!subscribed && (

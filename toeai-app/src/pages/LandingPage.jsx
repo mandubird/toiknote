@@ -385,7 +385,7 @@ const LandingPage = () => {
             <div className="rounded-2xl border border-gray-200 bg-white p-6 flex flex-col">
               <div className="text-xs font-semibold text-gray-500 mb-2">시험 임박자용</div>
               <div className="text-lg font-bold text-gray-900">15일 초압축 플랜</div>
-              <div className="mt-2 text-2xl font-bold text-gray-900">39,900원</div>
+              <div className="mt-2 text-2xl font-bold text-gray-900">29,900원</div>
               <p className="mt-2 text-xs text-gray-500 leading-relaxed">
                 시험일까지 시간이 많지 않은 수험생을 위한 단기 압축 플랜
               </p>

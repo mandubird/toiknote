@@ -21,7 +21,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 
 // ── 플랜별 결제 금액 / 기간 (portonePayment.js PLANS와 동기화 필수) ──
 const PLAN_CONFIG: Record<string, { amount: number; days: number }> = {
-  d15: { amount: 39900, days: 15 },
+  d15: { amount: 29900, days: 15 },
   d30: { amount: 49900, days: 30 },
   d60: { amount: 79900, days: 60 },
   // 하위 호환

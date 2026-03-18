@@ -20,7 +20,7 @@ const STORE_ID    = import.meta.env.VITE_PORTONE_STORE_ID    || ''
 const CHANNEL_KEY = import.meta.env.VITE_PORTONE_CHANNEL_KEY || ''
 
 export const PLANS = {
-  d15: { amount: 39900, days: 15, name: '토답 15일 초압축 플랜', label: '시험 임박자용' },
+  d15: { amount: 29900, days: 15, name: '토답 15일 초압축 플랜', label: '시험 임박자용' },
   d30: { amount: 49900, days: 30, name: '토답 30일 집중 플랜',  label: '가장 많이 선택' },
   d60: { amount: 79900, days: 60, name: '토답 60일 안정 플랜',  label: '장기 준비용' },
 }
