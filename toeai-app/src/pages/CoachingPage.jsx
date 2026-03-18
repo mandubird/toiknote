@@ -27,7 +27,7 @@ function buildTodayActions({ top3, weeklyMission }) {
 
   // 3) Part7/시간 관련 약점이 있으면 시간 제한 액션
   const part7Hint = [t1, t2].some((t) => typeof t === 'string' && (t.includes('Part7') || t.includes('Part 7') || t.includes('추론') || t.includes('복수') || t.includes('지문') || t.includes('시간')))
-  actions.push(part7Hint ? 'Part 7 2지문 시간 제한 풀이 (단일 90초 / 복수 150초)' : '오답 5문제 복습 후 “왜 틀렸는지” 한 줄로 요약')
+  actions.push(part7Hint ? 'Part 7 2지문 시간 제한 풀이 (단일 90초 / 복수 150초)' : '오답 5문제 복습 후 "왜 틀렸는지" 한 줄로 요약')
 
   return actions.slice(0, 3)
 }
@@ -242,9 +242,9 @@ export default function CoachingPage() {
       {!sub.paid && (
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
           <p className="text-sm font-semibold text-amber-900 mb-1">Pro에서 달라지는 것</p>
-          <ul className=”text-sm text-amber-800 space-y-1 mb-3”>
-            <li>• 구간 리포트로 “내가 오르는 근거”를 기록</li>
-            <li>• D-day 압축 전략으로 “지금 버릴 것/할 것”을 명확히</li>
+          <ul className="text-sm text-amber-800 space-y-1 mb-3">
+            <li>• 구간 리포트로 "내가 오르는 근거"를 기록</li>
+            <li>• D-day 압축 전략으로 "지금 버릴 것/할 것"을 명확히</li>
             <li>• 무제한 오답 분석 + AI 코치 심화</li>
           </ul>
           <button
