@@ -5,9 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getSubscription } from '../services/subscription'
 import { analyzeStrategy } from '../services/analyzeStrategy'
 import { getDashboardSummary } from '../services/programService'
-import WeeklyPlanCard from '../components/strategy/WeeklyPlanCard'
 import PriorityWeaknessSection from '../components/strategy/PriorityWeaknessSection'
-import { getMasteryBoard } from '../services/masteryService'
 
 const CACHE_MS = 24 * 60 * 60 * 1000
 
@@ -40,6 +38,8 @@ const MODE_CONFIG = {
     text: 'text-gray-700',
     badge: 'bg-gray-100 text-gray-600',
     desc: '설정에서 시험일을 입력하면 D-day 압축 모드가 계산돼요.',
+    reason:
+      '시험일까지 남은 시간이 확인되지 않아, 아직 전략 모드를 고정하지 않았어요. 먼저 시험일을 입력해 주세요.',
   },
   normal: {
     label: '일반 모드',
@@ -49,6 +49,8 @@ const MODE_CONFIG = {
     text: 'text-blue-800',
     badge: 'bg-blue-100 text-blue-700',
     desc: (n) => `D-${n} — 시험까지 여유가 있어요. 균형 잡힌 약점 교정으로 꾸준히 쌓아가세요.`,
+    reason:
+      '시험까지 여유가 있어 약점 전반을 균형 있게 교정할 수 있어요. 지금은 점수 기반을 안정적으로 쌓는 구간입니다.',
   },
   compressed: {
     label: '압축 모드',
@@ -58,6 +60,8 @@ const MODE_CONFIG = {
     text: 'text-blue-900',
     badge: 'bg-blue-200 text-blue-800',
     desc: (n) => `D-${n} 압축 모드 — 핵심 약점 위주로 집중 공략하세요.`,
+    reason:
+      '핵심 약점에만 집중할 시간이에요. 분산 투자보다 상위 약점 2개 공략이 점수 상승에 효과적입니다.',
   },
   high_compressed: {
     label: '고압축 모드',
@@ -67,6 +71,8 @@ const MODE_CONFIG = {
     text: 'text-orange-900',
     badge: 'bg-orange-100 text-orange-700',
     desc: (n) => `D-${n} 고압축 모드 — 시험일까지 가장 손실 큰 약점부터 압축 배치해요.`,
+    reason:
+      '시험일이 다가왔어요. 균형보다 “손실 큰 약점 1개 압축”이 우선입니다.',
   },
   survival: {
     label: '생존 모드',
@@ -76,6 +82,8 @@ const MODE_CONFIG = {
     text: 'text-red-900',
     badge: 'bg-red-100 text-red-700',
     desc: (n) => `D-${n} 생존 모드 — 핵심 파트 미션만 집중해요. 범위를 줄이고 반복하세요.`,
+    reason:
+      '새 학습은 오히려 역효과예요. 이미 아는 것을 안정적으로 유지하는 것이 지금 전략입니다.',
   },
 }
 
@@ -99,7 +107,6 @@ const StrategyPage = () => {
   const [strategy, setStrategy] = useState(null)
   const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState(null)
-  const [checklist, setChecklist] = useState([])
 
   useEffect(() => {
     if (!user) {
@@ -114,11 +121,9 @@ const StrategyPage = () => {
       getSubscription(uid),
       getDashboardSummary(uid),
       supabase.from('score_analytics').select('*').eq('user_id', uid).maybeSingle(),
-      getMasteryBoard(uid).catch(() => []),
     ]).then(([sub, dash, { data: d }]) => {
       setSubscribed(sub.paid)
       setDashboard(dash)
-      setChecklist([])
       if (sub.paid && d) {
         const lastAt = d.last_analyzed_at ? new Date(d.last_analyzed_at).getTime() : 0
         if (lastAt && Date.now() - lastAt < CACHE_MS) {
@@ -138,8 +143,6 @@ const StrategyPage = () => {
         }
       }
       setLoading(false)
-    }).then(([, , , board]) => {
-      setChecklist(Array.isArray(board) ? board : [])
     }).catch((err) => {
       console.error('[StrategyPage] init error:', err)
       setLoading(false)
@@ -173,15 +176,9 @@ const StrategyPage = () => {
   const mode = getMode(dday)
   const modeConf = MODE_CONFIG[mode]
   const modeDesc = typeof modeConf.desc === 'function' ? modeConf.desc(dday) : modeConf.desc
+  const modeReason = modeConf.reason
 
   const weakness3 = dashboard?.weakness_top3 ?? []
-  const weeklyActions = checklist?.length >= 3
-    ? checklist.slice(0, 3).map((i) => i?.name).filter(Boolean)
-    : [
-        '오늘 할 일 3개를 그대로 7일 반복(미션을 “루틴”으로 고정)',
-        '약점 TOP1 태그 15문제 집중 → 오답 원인 1줄 기록',
-        'Part 7 시간 압박이면 “시간 제한 풀이”만 추가',
-      ]
 
   return (
     <div className="p-4 space-y-4">
@@ -193,13 +190,6 @@ const StrategyPage = () => {
           이번 주에 “무엇을/얼마나” 할지 정해서, 점수 손실부터 줄입니다
         </p>
       </div>
-
-      {/* ── 섹션1.5: WeeklyPlanCard (행동 중심) ── */}
-      <WeeklyPlanCard
-        mode={mode}
-        weakness3={weakness3}
-        actions={weeklyActions}
-      />
 
       {/* ── 섹션2: 현재 모드 카드 ── */}
       <div className={`rounded-xl border p-4 ${modeConf.bg} ${modeConf.border}`}>
@@ -221,6 +211,19 @@ const StrategyPage = () => {
           >
             설정에서 시험일 입력하기 →
           </button>
+        )}
+      </div>
+
+      {/* ── 섹션2.5: 왜 이 전략인가 설명 카드 ── */}
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+        <p className="text-xs font-bold text-gray-500 mb-1">왜 이 전략인가요?</p>
+        <p className="text-sm text-gray-700">{modeReason}</p>
+        {weakness3[0] && (
+          <p className="text-xs text-gray-500 mt-2">
+            현재 가장 큰 손실 약점:{' '}
+            <strong>{weakness3[0]?.tag || weakness3[0]}</strong>
+            부터 우선 교정합니다.
+          </p>
         )}
       </div>
 
