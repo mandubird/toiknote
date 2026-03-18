@@ -62,10 +62,9 @@ export default function CoachingPage() {
     setLoading(true)
 
     // 코칭 화면 진입 로그 (coaching_logs) — KPI용
-    supabase
-      .from('coaching_logs')
-      .insert({ user_id: user.id })
-      .catch(() => {})
+    // Supabase 쿼리 빌더는 PostgrestBuilder를 반환하므로, 여기서는 에러를 무시하고 fire-and-forget으로 호출만 한다.
+    // (에러가 나더라도 코칭 화면 렌더링에는 영향을 주지 않도록 await/then/catch를 붙이지 않는다.)
+    supabase.from('coaching_logs').insert({ user_id: user.id })
 
     Promise.all([
       getDashboardSummary(user.id).catch(() => null),
