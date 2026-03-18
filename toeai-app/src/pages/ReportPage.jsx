@@ -46,7 +46,7 @@ function buildNextActions(topTags = []) {
   else actions.push('가장 자주 틀린 태그 1개를 골라 15문제 반복')
 
   const part7Hint = [t1, t2, t3].some((t) => typeof t === 'string' && (t.includes('Part7') || t.includes('Part 7') || t.includes('추론') || t.includes('복수') || t.includes('지문') || t.includes('시간')))
-  actions.push(part7Hint ? 'Part 7 2지문 시간 제한 풀이 (단일 90초 / 복수 150초 기준)' : '오답 5문제 복습 후 “왜 틀렸는지” 한 줄로 요약')
+  actions.push(part7Hint ? 'Part 7 2지문 시간 제한 풀이 (단일 90초 / 복수 150초 기준)' : '오답 5문제 복습 후 "왜 틀렸는지" 한 줄로 요약')
 
   return actions.slice(0, 3)
 }

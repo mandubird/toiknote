@@ -72,7 +72,7 @@ const MODE_CONFIG = {
     badge: 'bg-orange-100 text-orange-700',
     desc: (n) => `D-${n} 고압축 모드 — 시험일까지 가장 손실 큰 약점부터 압축 배치해요.`,
     reason:
-      '시험일이 다가왔어요. 균형보다 “손실 큰 약점 1개 압축”이 우선입니다.',
+      '시험일이 다가왔어요. 균형보다 "손실 큰 약점 1개 압축"이 우선입니다.',
   },
   survival: {
     label: '생존 모드',
@@ -187,7 +187,7 @@ const StrategyPage = () => {
       <div className="mb-2">
         <h2 className="text-2xl font-bold text-surface-900">D-day 압축 전략</h2>
         <p className="text-sm text-surface-500 mt-1">
-          이번 주에 “무엇을/얼마나” 할지 정해서, 점수 손실부터 줄입니다
+          이번 주에 "무엇을/얼마나" 할지 정해서, 점수 손실부터 줄입니다
         </p>
       </div>
 

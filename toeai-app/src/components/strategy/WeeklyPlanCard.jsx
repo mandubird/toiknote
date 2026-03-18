@@ -1,8 +1,8 @@
 function pickModeTitle(mode) {
-  if (mode === 'survival') return '이번 주는 “생존 루틴”으로 갑니다'
-  if (mode === 'high_compressed') return '이번 주는 “고압축 루틴”으로 갑니다'
-  if (mode === 'compressed') return '이번 주는 “압축 루틴”으로 갑니다'
-  if (mode === 'normal') return '이번 주는 “균형 루틴”으로 갑니다'
+  if (mode === 'survival') return '이번 주는 "생존 루틴"으로 갑니다'
+  if (mode === 'high_compressed') return '이번 주는 "고압축 루틴"으로 갑니다'
+  if (mode === 'compressed') return '이번 주는 "압축 루틴"으로 갑니다'
+  if (mode === 'normal') return '이번 주는 "균형 루틴"으로 갑니다'
   return '이번 주 루틴을 세팅해요'
 }
 
