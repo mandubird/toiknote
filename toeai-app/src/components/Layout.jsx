@@ -11,6 +11,10 @@ import { getSubscription, getFreeLimit, getTrialStatus } from '../services/subsc
 import { useRefreshList } from '../contexts/RefreshListContext'
 import PaywallModal from './PaywallModal'
 import OnboardingModal from './OnboardingModal'
+import ReviewStep1Modal from './review/ReviewStep1Modal'
+import { useReviewTrigger } from '../hooks/useReviewTrigger'
+
+const reviewStep1HideKey = (uid) => (uid ? `toeai_hide_review_step1_${uid}` : '')
 
 const Layout = () => {
   const location = useLocation()
@@ -47,6 +51,33 @@ const Layout = () => {
   useEffect(() => {
     refreshTrialInfo()
   }, [refreshTrialInfo])
+
+  const [hideReviewStep1Session, setHideReviewStep1Session] = useState(false)
+  const { shouldShowReview } = useReviewTrigger(user?.id)
+
+  useEffect(() => {
+    if (!user?.id) {
+      setHideReviewStep1Session(false)
+      return
+    }
+    try {
+      setHideReviewStep1Session(sessionStorage.getItem(reviewStep1HideKey(user.id)) === '1')
+    } catch {
+      setHideReviewStep1Session(false)
+    }
+  }, [user?.id])
+
+  const showReviewStep1Modal = Boolean(user && shouldShowReview && !hideReviewStep1Session)
+
+  const dismissReviewStep1ForSession = useCallback(() => {
+    if (!user?.id) return
+    try {
+      sessionStorage.setItem(reviewStep1HideKey(user.id), '1')
+    } catch {
+      /* ignore */
+    }
+    setHideReviewStep1Session(true)
+  }, [user?.id])
 
   const handleUploadComplete = useCallback(
     async (url) => {
@@ -267,6 +298,16 @@ const Layout = () => {
 
       {/* 첫 방문 온보딩 */}
       <OnboardingModal />
+
+      {/* 후기 1단계 자동 요청 (유료 + 트리거) */}
+      <ReviewStep1Modal
+        open={showReviewStep1Modal}
+        userId={user?.id}
+        onClose={dismissReviewStep1ForSession}
+        onComplete={() => {
+          /* 제출 완료 — 다음 방문부터 RPC가 비노출 */
+        }}
+      />
 
       {/* 결제 유도 모달 (5회 초과 시) */}
       <PaywallModal

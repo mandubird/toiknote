@@ -28,12 +28,15 @@ const LandingPage = () => {
       })
   }, [user])
 
-  // 공개된 proof_assets 6개까지 랜딩에 노출
+  // 공개된 후기(proof_assets) — 2단계 작성·승인된 것만 (스펙 6.4)
   useEffect(() => {
     supabase
       .from('proof_assets')
       .select('*')
+      .eq('type', 'review')
       .eq('is_public', true)
+      .eq('review_stage', 2)
+      .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(6)
       .then(({ data, error }) => {
@@ -345,13 +348,19 @@ const LandingPage = () => {
               <div className="grid gap-4 sm:grid-cols-3">
                 {proofs.map((p) => (
                   <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
-                    <div className="mb-1 text-xs font-semibold text-gray-500 uppercase">
-                      {p.type === 'review'
-                        ? '후기'
-                        : p.type === 'before_after'
-                        ? '점수 전후 비교'
-                        : '인사이트'}
-                    </div>
+                    <div className="mb-1 text-xs font-semibold text-gray-500 uppercase">후기</div>
+                    {p.start_score != null && p.current_score != null && (
+                      <p className="text-sm font-bold text-green-700 mb-1">
+                        {p.start_score} → {p.current_score}
+                        {p.current_score > p.start_score && (
+                          <span className="text-xs ml-1">(+{p.current_score - p.start_score}점)</span>
+                        )}
+                      </p>
+                    )}
+                    {p.usage_days != null && (
+                      <p className="text-[11px] text-gray-500 mb-1">{p.usage_days}일 사용</p>
+                    )}
+                    {p.headline && <p className="font-semibold text-gray-900 mb-1">{p.headline}</p>}
                     {p.image_url && (
                       <div className="mb-2">
                         <img src={p.image_url} alt="" className="w-full rounded-lg object-cover max-h-40" />
@@ -361,6 +370,9 @@ const LandingPage = () => {
                       <p className="text-xs leading-relaxed whitespace-pre-line line-clamp-5">
                         {p.content}
                       </p>
+                    )}
+                    {p.best_feature && (
+                      <p className="mt-2 text-[11px] text-primary-600">✓ {p.best_feature}</p>
                     )}
                   </div>
                 ))}

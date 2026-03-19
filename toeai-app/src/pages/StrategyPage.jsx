@@ -6,6 +6,8 @@ import { getSubscription } from '../services/subscription'
 import { analyzeStrategy } from '../services/analyzeStrategy'
 import { getDashboardSummary } from '../services/programService'
 import PriorityWeaknessSection from '../components/strategy/PriorityWeaknessSection'
+import { fetchPublicProofReviews } from '../services/proofReviewService'
+import ProofReviewCard from '../components/review/ProofReviewCard'
 
 const CACHE_MS = 24 * 60 * 60 * 1000
 
@@ -107,6 +109,7 @@ const StrategyPage = () => {
   const [strategy, setStrategy] = useState(null)
   const [dashboard, setDashboard] = useState(null)
   const [error, setError] = useState(null)
+  const [relatedProofReviews, setRelatedProofReviews] = useState([])
 
   useEffect(() => {
     if (!user) {
@@ -148,6 +151,19 @@ const StrategyPage = () => {
       setLoading(false)
     })
   }, [user])
+
+  useEffect(() => {
+    if (!user || !dashboard?.target_score) {
+      setRelatedProofReviews([])
+      return
+    }
+    const tgt = Number(dashboard.target_score) || 850
+    fetchPublicProofReviews(2, {
+      reviewStage2Only: true,
+      minTargetScore: tgt,
+      maxTargetScore: tgt,
+    }).then(setRelatedProofReviews)
+  }, [user?.id, dashboard?.target_score])
 
   const handleAnalyze = async () => {
     if (!user || !subscribed) return
@@ -266,6 +282,20 @@ const StrategyPage = () => {
             지금 우선 교정할 약점
           </p>
           <PriorityWeaknessSection userId={user.id} />
+        </div>
+      )}
+
+      {/* 비슷한 목표 점수대 후기 (스펙 6.3) */}
+      {relatedProofReviews.length > 0 && (
+        <div className="bg-surface-50 rounded-2xl border border-surface-200 p-4">
+          <p className="text-xs font-black text-surface-500 uppercase tracking-wide mb-2">
+            비슷한 목표를 둔 사람들의 후기
+          </p>
+          <div className="space-y-3">
+            {relatedProofReviews.map((r) => (
+              <ProofReviewCard key={r.id} review={r} showCta />
+            ))}
+          </div>
         </div>
       )}
 

@@ -8,6 +8,7 @@
  */
 import { useState, useEffect } from 'react'
 import { requestPlanPayment, verifyPortonePayment, PLANS } from '../services/portonePayment'
+import PaymentProofReviews from './review/PaymentProofReviews'
 
 const PLAN_CARDS = [
   {
@@ -148,6 +149,8 @@ export default function PaymentSheet({ open, onClose, user, onSuccess }) {
 
         {/* 스크롤 영역 */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <PaymentProofReviews />
+
           {/* 에러 */}
           {paymentError && (
             <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{paymentError}</p>

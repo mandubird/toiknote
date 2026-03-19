@@ -6,6 +6,13 @@ import { getSubscription } from '../services/subscription'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
 import { getMasteryBoard } from '../services/masteryService'
 import { supabase } from '../lib/supabase'
+import {
+  fetchMyProofReview,
+  getPublicProofReviewCount,
+  fetchPublicProofReviews,
+} from '../services/proofReviewService'
+import ReviewStep2Modal from '../components/review/ReviewStep2Modal'
+import ProofReviewCard from '../components/review/ProofReviewCard'
 
 function buildTodayActions({ top3, weeklyMission }) {
   const pickName = (x) => {
@@ -50,6 +57,10 @@ export default function CoachingPage() {
   const [wrongCount, setWrongCount] = useState(0)
   const [checklist, setChecklist] = useState([])
   const [loading, setLoading] = useState(true)
+  const [myProofReview, setMyProofReview] = useState(null)
+  const [showReviewStep2, setShowReviewStep2] = useState(false)
+  const [socialProofList, setSocialProofList] = useState([])
+  const [socialProofCount, setSocialProofCount] = useState(0)
 
   useEffect(() => {
     if (!user) {
@@ -93,6 +104,26 @@ export default function CoachingPage() {
         }
       })
       .finally(() => setLoading(false))
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setMyProofReview(null)
+      return
+    }
+    fetchMyProofReview(user.id).then(setMyProofReview)
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user) return
+    getPublicProofReviewCount().then((n) => {
+      setSocialProofCount(n)
+      if (n >= 3) {
+        fetchPublicProofReviews(8, { reviewStage2Only: true }).then(setSocialProofList)
+      } else {
+        setSocialProofList([])
+      }
+    })
   }, [user?.id])
 
   const dday = useMemo(() => formatDday(dashboard?.examDate), [dashboard?.examDate])
@@ -177,6 +208,45 @@ export default function CoachingPage() {
           </button>
         )}
       </div>
+
+      {/* 2단계 후기 유도 (1단계 완료 시) */}
+      {myProofReview?.review_stage === 1 && (
+        <div className="rounded-2xl border-2 border-accent-300 bg-accent-50 p-4">
+          <p className="text-sm font-bold text-surface-900 mb-1">한 번 더 후기를 남겨 주세요</p>
+          <p className="text-xs text-surface-600 mb-3">
+            공개 후기를 작성하고 동의하면 이용 기간 <strong>+5일</strong>이 더 연장돼요. (운영 검토 후 노출)
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowReviewStep2(true)}
+            className="w-full py-3 rounded-xl bg-accent-500 text-white text-sm font-black"
+          >
+            공개 후기 작성하기 (+5일)
+          </button>
+        </div>
+      )}
+
+      {/* 사회적 증거 배너 — 공개 후기 3건 이상일 때 (스펙 6.2) */}
+      {socialProofCount >= 3 && socialProofList.length > 0 && (
+        <div className="rounded-2xl border border-surface-200 bg-white p-4 overflow-hidden">
+          <p className="text-xs font-black text-surface-500 uppercase tracking-wide mb-2">
+            함께 쓰는 사람들의 변화
+          </p>
+          <div className="flex gap-3 overflow-x-auto snap-x pb-1 -mx-1 px-1">
+            {socialProofList.map((r) => (
+              <ProofReviewCard key={r.id} review={r} compact showCta={false} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <ReviewStep2Modal
+        open={showReviewStep2}
+        userId={user?.id}
+        assetId={myProofReview?.id}
+        onClose={() => setShowReviewStep2(false)}
+        onComplete={() => user?.id && fetchMyProofReview(user.id).then(setMyProofReview)}
+      />
 
       {/* 오늘 할 일 3개 */}
       <div className="bg-surface-50 rounded-2xl border border-surface-200 p-4">
