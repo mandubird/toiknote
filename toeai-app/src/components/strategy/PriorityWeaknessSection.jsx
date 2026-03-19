@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { buildLocalPriorityCards } from '../../services/priorityWeaknessFallback'
 import PriorityWeaknessCard from './PriorityWeaknessCard'
 
 export default function PriorityWeaknessSection({ userId }) {
@@ -22,10 +23,17 @@ export default function PriorityWeaknessSection({ userId }) {
       .invoke('strategy-priority-cards', {
         body: { userId },
       })
-      .then(({ data, error: fnError }) => {
+      .then(async ({ data, error: fnError }) => {
         if (cancelled) return
         if (fnError) {
           console.error('strategy-priority-cards error:', fnError)
+          const local = await buildLocalPriorityCards(userId)
+          if (cancelled) return
+          if (local.length) {
+            setCards(local)
+            setError(null)
+            return
+          }
           setError('약점 코칭 카드를 불러오지 못했어요.')
           setCards([])
           return
@@ -33,9 +41,16 @@ export default function PriorityWeaknessSection({ userId }) {
         const list = Array.isArray(data?.priority_cards) ? data.priority_cards : []
         setCards(list)
       })
-      .catch((e) => {
+      .catch(async (e) => {
         if (cancelled) return
         console.error('strategy-priority-cards invoke 예외:', e)
+        const local = await buildLocalPriorityCards(userId)
+        if (cancelled) return
+        if (local.length) {
+          setCards(local)
+          setError(null)
+          return
+        }
         setError('약점 코칭 카드를 불러오지 못했어요.')
         setCards([])
       })

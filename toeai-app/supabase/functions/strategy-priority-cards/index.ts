@@ -91,9 +91,10 @@ serve(async (req) => {
     }
 
     // 3. 최근 오답 상세 조회 (태그/메모용)
+    // 스키마에는 memo 없음 — 사용자 메모/해설은 explanation 컬럼 사용
     const { data: wrongAnswers, error: wrongErr } = await supabase
       .from('wrong_answers')
-      .select('tags, part, created_at, memo')
+      .select('tags, part, created_at, explanation')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50)
@@ -138,7 +139,7 @@ serve(async (req) => {
         topTags,
         wrongAnswers.slice(0, 10).map((w: any) => ({
           tags: Array.isArray(w.tags) ? w.tags : [],
-          memo: w.memo ?? null,
+          memo: w.explanation ?? null,
         })),
       )
 
