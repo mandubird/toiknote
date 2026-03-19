@@ -261,7 +261,7 @@ export default function MasteryBoard({ userId }) {
             />
           ))}
           <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
-            이후 `user_tag_stats` 집계가 채워지면 자동 체크리스트로 전환돼요
+            오답을 더 쌓으면 더 정밀한 체크리스트로 업그레이드돼요
           </p>
         </div>
       )
