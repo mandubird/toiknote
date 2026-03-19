@@ -14,9 +14,13 @@ function fallbackCard(tag, count) {
       reason: '정답 근거 연결이 약해 반복 실수가 나오고 있습니다.',
       action: '문제 풀이 후 정답 근거를 한 줄로 직접 적어보세요.',
     },
-    details: {
+    세부정보: {
       reason: '세부정보 함정 표현에서 반복적으로 흔들리고 있습니다.',
       action: '오늘은 세부정보 문제만 골라 오답 근거까지 체크하세요.',
+    },
+    어휘: {
+      reason: '어휘 선택 실수가 반복되고 있습니다.',
+      action: '오늘은 헷갈렸던 어휘를 노트에 정리하고 재확인하세요.',
     },
   }
   const base = fallbacks[tag] ?? {
