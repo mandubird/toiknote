@@ -52,7 +52,7 @@ function PublicHeader() {
             color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          AI 진단 시작
+          무료로 시작하기
         </button>
       </div>
     </header>

@@ -59,7 +59,7 @@ const PaywallModal = ({ open, onClose, userId, userEmail, userDisplayName, userP
 
           <h2 className="text-lg font-bold text-gray-900 mb-1">무료 5회를 모두 사용했어요</h2>
           <p className="text-sm text-gray-500 mb-4">
-            유료 플랜에서 <strong className="text-gray-800">무제한 오답 분석 + AI 약점 코치</strong>를 이용하세요.
+            유료 플랜에서 <strong className="text-gray-800">무제한 오답 분석 + 약점 코치</strong>를 이용하세요.
           </p>
 
           {error && <p className="text-xs text-red-600 mb-3">{error}</p>}

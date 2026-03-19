@@ -43,10 +43,10 @@ const PLAN_CARDS = [
 ]
 
 const PLAN_BENEFITS = [
-  'AI 약점 진단',
+  '약점 진단',
   '무제한 오답 분석',
   'D-day 압축 전략',
-  'AI 코치 멘트',
+  '코치 멘트',
   '약점 우선순위 로드맵',
 ]
 
@@ -223,7 +223,7 @@ const SettingsPage = () => {
               <span className="text-primary-300 text-xs">월 29,900원</span>
             </div>
             <p className="text-sm text-primary-200 mb-4">
-              AI 전략 분석 · 무제한 오답 · D-day 압축 코칭
+              전략 분석 · 무제한 오답 · D-day 압축 코칭
             </p>
             <button
               type="button"
@@ -279,7 +279,7 @@ const SettingsPage = () => {
             {user && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <h3 className="font-semibold text-gray-900 mb-1">점수 정보</h3>
-                <p className="text-xs text-gray-500 mb-3">AI 약점 분석과 전략 제안에 사용해요</p>
+                <p className="text-xs text-gray-500 mb-3">약점 분석과 전략 제안에 사용해요</p>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">현재 총점</label>
@@ -415,8 +415,8 @@ const SettingsPage = () => {
               )}
               <p className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
                 {subscribed
-                  ? `${PLAN_LABELS[plan]} 이용 중 — 무제한 오답 분석 + AI 전략 코치 활성`
-                  : 'FREE: 오답 5문제 체험. 결제 후: 무제한 분석 + D-day 압축 전략 + AI 코치'}
+                  ? `${PLAN_LABELS[plan]} 이용 중 — 무제한 오답 분석 + 전략 코치 활성`
+                  : 'FREE: 오답 5문제 체험. 결제 후: 무제한 분석 + D-day 압축 전략 + 코치'}
               </p>
             </div>
 

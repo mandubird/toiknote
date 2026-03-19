@@ -57,7 +57,7 @@ export default function AboutPage() {
           color: '#fff', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer',
         }}
       >
-        지금 AI 진단 시작하기 →
+        지금 시작하기 →
       </button>
     </PublicLayout>
   )

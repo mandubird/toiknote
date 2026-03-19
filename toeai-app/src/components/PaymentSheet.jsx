@@ -35,10 +35,10 @@ const PLAN_CARDS = [
 ]
 
 const PLAN_BENEFITS = [
-  'AI 약점 진단',
+  '약점 진단',
   '무제한 오답 분석',
   'D-day 압축 전략',
-  'AI 코치 멘트',
+  '코치 멘트',
   '약점 우선순위 로드맵',
 ]
 

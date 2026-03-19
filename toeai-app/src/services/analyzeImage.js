@@ -21,18 +21,18 @@ export async function analyzeToeicImage(imageUrl) {
 
   if (error) {
     console.error('analyze-toeic-image Edge Function 오류:', error)
-    throw new Error(error.message || 'AI 분석에 실패했어요.')
+    throw new Error(error.message || '사진 분석에 실패했어요.')
   }
 
   if (!data?.content) {
-    throw new Error('AI 분석 결과를 받지 못했어요.')
+    throw new Error('사진 분석 결과를 받지 못했어요.')
   }
 
   let parsed
   try {
     parsed = JSON.parse(data.content)
   } catch {
-    throw new Error('AI 분석 결과 형식이 올바르지 않아요.')
+    throw new Error('사진 분석 결과 형식이 올바르지 않아요.')
   }
 
   const safeStr = (v) => (v != null && String(v).trim() !== '' ? String(v).trim() : null)

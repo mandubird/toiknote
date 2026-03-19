@@ -145,7 +145,7 @@ export default function LandingDetailPage() {
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="text-sm font-medium text-primary-600 mb-2">780 → 865 <span className="text-green-600">(+85)</span></div>
-                <p className="text-gray-700 text-sm">"관계대명사가 약점인 줄 몰랐는데 AI 분석으로 알게 되고 집중하니 Part 5가 90%로 올랐어요."</p>
+                <p className="text-gray-700 text-sm">"관계대명사가 약점인 줄 몰랐는데 분석으로 알게 되고 집중하니 Part 5가 90%로 올랐어요."</p>
                 <span className="mt-2 block text-xs text-gray-500">박O연 · 취준생</span>
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function LandingDetailPage() {
               )}
             </div>
             <ul className="mt-4 space-y-2 text-sm text-gray-700">
-              <li>✓ AI 약점 분석 + 점수 예측</li>
+              <li>✓ 약점 분석 + 점수 예측</li>
               <li>✓ 주간 맞춤 전략 리포트</li>
               <li>✓ D-day 압축 전략 시스템</li>
             </ul>

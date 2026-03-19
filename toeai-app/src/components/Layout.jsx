@@ -95,8 +95,8 @@ const Layout = () => {
         setConfirmImageUrl(url)
         setShowConfirmModal(true)
       } catch (err) {
-        setAnalysisError(err?.message || 'AI 분석에 실패했어요.')
-        alert(err?.message || 'AI 분석에 실패했어요. 다시 시도해 주세요.')
+        setAnalysisError(err?.message || '사진 분석에 실패했어요.')
+        alert(err?.message || '사진 분석에 실패했어요. 다시 시도해 주세요.')
       } finally {
         setAnalyzing(false)
       }
