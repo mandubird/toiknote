@@ -253,7 +253,7 @@ const StrategyPage = () => {
             disabled={analyzing}
             className="w-full py-4 rounded-2xl bg-primary-600 text-white font-bold text-base disabled:opacity-50 hover:bg-primary-700 transition-colors shadow-lg shadow-primary-200"
           >
-            {analyzing ? '분석 중…' : strategy ? '🔄 전략 새로고침' : '⚡ AI 전략 분석 시작'}
+            {analyzing ? '분석 중…' : strategy ? '🔄 전략 새로고침' : '⚡ 전략 분석 시작'}
           </button>
           {error && <p className="text-xs text-red-500 mt-2 text-center">{error}</p>}
         </div>
@@ -416,7 +416,7 @@ const StrategyPage = () => {
       {/* 위 버튼을 눌러서... 안내는 구독 중이고 분석 결과가 없을 때만 */}
       {subscribed && !strategy && !analyzing && (
         <p className="text-sm text-surface-400 text-center py-2">
-          위 버튼을 눌러 AI 전략을 분석해 보세요
+          위 버튼을 눌러 전략을 분석해 보세요
         </p>
       )}
     </div>

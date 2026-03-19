@@ -1,9 +1,8 @@
 /**
- * v4.35: 랜딩페이지 카피 최종본 v1.0 적용
- * 카피 문서 26.03.11_todap_landing_copy_final_v1_0 기반
+ * 랜딩 페이지 — docs/26.03.19_todap_landing_rebuild_spec.md (v3)
  */
-import { useNavigate, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { PublicFooter } from '../components/PublicLayout'
 import { siteBusinessInfo } from '../config/siteBusinessInfo'
@@ -13,7 +12,7 @@ const LandingPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [hasDiagnosed, setHasDiagnosed] = useState(false)
-  const [proofs, setProofs] = useState([])
+  const [proofList, setProofList] = useState([])
 
   // 로그인 유저의 진단 완료 여부 확인
   useEffect(() => {
@@ -28,25 +27,24 @@ const LandingPage = () => {
       })
   }, [user])
 
-  // 공개된 후기(proof_assets) — 2단계 작성·승인된 것만 (스펙 6.4)
+  // 증거 섹션: 공개·2단계 후기만, 최대 3건 (랜딩 리빌드 스펙)
   useEffect(() => {
     supabase
       .from('proof_assets')
-      .select('*')
+      .select('id, headline, content, start_score, current_score, usage_days')
       .eq('type', 'review')
       .eq('is_public', true)
       .eq('review_stage', 2)
-      .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(6)
+      .limit(3)
       .then(({ data, error }) => {
         if (error) return
-        setProofs(data || [])
+        setProofList(data || [])
       })
   }, [])
 
-  const scrollToPricing = () => {
-    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToPlans = () => {
+    document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const handleMainCta = () => {
@@ -61,6 +59,14 @@ const LandingPage = () => {
       navigate('/diagnostic')
     }
   }
+
+  const visibleProofs = useMemo(
+    () =>
+      proofList
+        .filter((p) => p.start_score != null && p.current_score != null)
+        .slice(0, 3),
+    [proofList]
+  )
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -95,17 +101,26 @@ const LandingPage = () => {
           토답은 현재 점수, 약점 파트, 시험일까지 남은 시간을 바탕으로<br />
           가장 점수 손실이 큰 영역부터 압축 관리하는 토익 전략 서비스입니다.
         </p>
-        <button
-          type="button"
-          onClick={handleMainCta}
-          className="mt-8 rounded-xl bg-amber-400 px-8 py-4 text-lg font-bold text-gray-900 shadow-lg hover:bg-amber-300"
-        >
-          무료 점수 진단 받기 →
-        </button>
-        <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm opacity-90">
-          <span>✓ 초기 사용자 데이터 기반 고도화 진행 중</span>
-          <span>✓ 실제 점수 변화 데이터 누적 중</span>
-          <span>✓ 피드백 기반 지속 개선</span>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <button
+            type="button"
+            onClick={handleMainCta}
+            className="w-full max-w-xs rounded-xl bg-amber-400 px-8 py-4 text-lg font-bold text-gray-900 shadow-lg hover:bg-amber-300 sm:w-auto"
+          >
+            무료로 시작하기 →
+          </button>
+          <button
+            type="button"
+            onClick={scrollToPlans}
+            className="w-full max-w-xs rounded-xl border-2 border-white/80 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 sm:w-auto"
+          >
+            내 상황에 맞는 플랜 보기
+          </button>
+        </div>
+        <div className="mt-8 flex flex-col items-center gap-2 text-sm opacity-90 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-6">
+          <span>✓ 진단 후 내 약점 TOP3 바로 확인</span>
+          <span>✓ 오늘 해야 할 공부 3개 제시</span>
+          <span>✓ 시험일까지 버릴 공부까지 정리</span>
         </div>
       </section>
 
@@ -136,6 +151,11 @@ const LandingPage = () => {
       {/* ── 3. 잘못된 방법 vs 올바른 방법 ── */}
       <section className="border-t border-gray-100 bg-gray-50 px-4 py-16">
         <div className="mx-auto max-w-4xl">
+          <p className="mx-auto max-w-2xl text-center text-base font-medium text-gray-800 leading-relaxed mb-10">
+            토답은 문제를 더 많이 풀게 만드는 서비스가 아닙니다.
+            <br />
+            점수를 가장 많이 깎는 원인을 먼저 줄이는 서비스입니다.
+          </p>
           <h2 className="text-center text-2xl font-bold text-gray-900">700~900 구간, 전략이 다릅니다</h2>
           <p className="mt-3 text-center text-sm text-gray-500 leading-relaxed">
             고득점 구간에서는 무작정 더 푸는 것보다<br />
@@ -168,10 +188,10 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── 4. AI 분석 예시 ── */}
+      {/* ── 4. 분석 예시 ── */}
       <section id="diagnosis" className="border-t border-gray-100 px-4 py-16">
         <div className="mx-auto max-w-xl">
-          <h2 className="text-2xl font-bold text-gray-900 text-center">AI가 이렇게 분석해줍니다</h2>
+          <h2 className="text-2xl font-bold text-gray-900 text-center">학습 맞춤 엔진이 이렇게 분석합니다</h2>
           <p className="mt-3 text-center text-sm text-gray-500 leading-relaxed">
             현재 점수와 오답 데이터를 바탕으로<br />
             가장 점수 손실이 큰 약점을 찾아드립니다.
@@ -179,7 +199,7 @@ const LandingPage = () => {
 
           {/* 예시 카드 */}
           <div className="mt-8 rounded-xl border-2 border-primary-100 bg-primary-50 p-5 shadow-sm">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary-500">📊 AI 진단 예시</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-primary-500">📊 분석 예시</p>
             <div className="mb-3 flex gap-6">
               <div>
                 <p className="text-xs text-gray-500">현재 예상 점수</p>
@@ -230,7 +250,7 @@ const LandingPage = () => {
                   onClick={handleMainCta}
                   className="w-full rounded-xl bg-amber-400 py-4 text-lg font-bold text-gray-900 shadow hover:bg-amber-300"
                 >
-                  무료로 내 점수 진단 시작하기 →
+                  무료로 시작하기 →
                 </button>
                 <p className="mt-2 text-center text-xs text-gray-400 leading-relaxed">
                   로그인 후 오답 문제를 등록하면<br />진단 결과가 더 정확해집니다.
@@ -255,7 +275,7 @@ const LandingPage = () => {
                 badge: 'D-57일+',
                 label: '일반 모드',
                 title: 'RC·LC 균형 교정',
-                desc: 'AI가 진단한 약점 태그를 균형 있게 교정하며 점수 기반을 쌓아요.',
+                desc: '약점 태그를 균형 있게 교정하며 점수 기반을 쌓아요.',
                 sub: '아직 시간이 있을 때는 약점 전반을 안정적으로 다집니다.',
                 color: 'border-blue-200 bg-blue-50',
                 badgeColor: 'bg-blue-100 text-blue-700',
@@ -313,77 +333,44 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── 6. 신뢰 / 검증 ── */}
-      <section className="border-t border-gray-100 px-4 py-16">
-        <div className="mx-auto max-w-4xl">
-          <h2 className="text-center text-2xl font-bold text-gray-900">사용자 데이터 기반으로<br />고도화 중입니다</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-3">
-            <div className="rounded-xl border border-gray-200 bg-white p-6">
-              <div className="text-2xl mb-2">📝</div>
-              <div className="font-semibold text-gray-800">실제 수험생 피드백 반영 중</div>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                초기 사용자 경험을 바탕으로 약점 분석과 전략 추천 정확도를 계속 개선하고 있습니다.
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6">
-              <div className="text-2xl mb-2">📈</div>
-              <div className="font-semibold text-gray-800">점수 변화 데이터 누적 중</div>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                사용자별 점수 변화와 약점 개선 패턴을 기반으로 예측 정확도를 높이고 있습니다.
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-6">
-              <div className="text-2xl mb-2">⏱️</div>
-              <div className="font-semibold text-gray-800">시간 관리 개선 사례 정리 중</div>
-              <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                Part 7 시간 부족, LC 실수 패턴 등 실제 시험 직전 전략 데이터를 축적하고 있습니다.
-              </p>
-            </div>
-          </div>
-
-          {/* proof_assets 기반 실제 증거 섹션 */}
-          {proofs.length > 0 && (
-            <div className="mt-12">
-              <h3 className="text-center text-xl font-bold text-gray-900 mb-4">실제 사용자 후기/인사이트</h3>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {proofs.map((p) => (
-                  <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
-                    <div className="mb-1 text-xs font-semibold text-gray-500 uppercase">후기</div>
-                    {p.start_score != null && p.current_score != null && (
+      {/* ── 6. 실사용자 증거 (데이터 있을 때만 전체 섹션 렌더) ── */}
+      {visibleProofs.length > 0 && (
+        <section className="border-t border-gray-100 px-4 py-16">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="text-center text-2xl font-bold text-gray-900 mb-8">실제 사용자 변화</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {visibleProofs.map((p) => {
+                  const diff = p.current_score - p.start_score
+                  const raw = typeof p.content === 'string' ? p.content.trim() : ''
+                  const isJsonLike = raw.startsWith('{')
+                  const textBody = isJsonLike ? '' : raw
+                  const body =
+                    textBody.length > 80 ? `${textBody.slice(0, 80)}…` : textBody
+                  return (
+                    <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">
                       <p className="text-sm font-bold text-green-700 mb-1">
                         {p.start_score} → {p.current_score}
-                        {p.current_score > p.start_score && (
-                          <span className="text-xs ml-1">(+{p.current_score - p.start_score}점)</span>
-                        )}
+                        {diff > 0 && <span className="text-xs ml-1">(+{diff}점)</span>}
                       </p>
-                    )}
-                    {p.usage_days != null && (
-                      <p className="text-[11px] text-gray-500 mb-1">{p.usage_days}일 사용</p>
-                    )}
-                    {p.headline && <p className="font-semibold text-gray-900 mb-1">{p.headline}</p>}
-                    {p.image_url && (
-                      <div className="mb-2">
-                        <img src={p.image_url} alt="" className="w-full rounded-lg object-cover max-h-40" />
-                      </div>
-                    )}
-                    {p.content && (
-                      <p className="text-xs leading-relaxed whitespace-pre-line line-clamp-5">
-                        {p.content}
-                      </p>
-                    )}
-                    {p.best_feature && (
-                      <p className="mt-2 text-[11px] text-primary-600">✓ {p.best_feature}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      {p.usage_days != null && (
+                        <p className="text-[11px] text-gray-500 mb-2">{p.usage_days}일 사용</p>
+                      )}
+                      {p.headline && (
+                        <p className="font-semibold text-gray-900 mb-2">{p.headline}</p>
+                      )}
+                      {body ? (
+                        <p className="text-xs leading-relaxed text-gray-600 whitespace-pre-line">{body}</p>
+                      ) : null}
+                    </div>
+                  )
+                })}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* ── 7. 가격 플랜 ── */}
-      <section id="pricing" className="border-t border-gray-100 bg-primary-50 px-4 py-16">
+      <section id="plans" className="border-t border-gray-100 bg-primary-50 px-4 py-16">
         <div className="mx-auto max-w-4xl">
           <h2 className="text-center text-2xl font-bold text-gray-900">내 상황에 맞는 플랜을 선택하세요</h2>
           <p className="mt-3 text-center text-sm text-gray-500 leading-relaxed">
@@ -395,14 +382,15 @@ const LandingPage = () => {
 
             {/* 플랜 1: 15일 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 flex flex-col">
-              <div className="text-xs font-semibold text-gray-500 mb-2">시험 임박자용</div>
-              <div className="text-lg font-bold text-gray-900">15일 초압축 플랜</div>
+              <p className="text-xs font-medium text-primary-700 mb-2">시험 2주 이내 남은 사람</p>
+              <div className="text-xs font-semibold text-gray-500 mb-1">시험 임박자용</div>
+              <div className="text-lg font-bold text-gray-900">시험 직전 압축</div>
               <div className="mt-2 text-2xl font-bold text-gray-900">29,900원</div>
               <p className="mt-2 text-xs text-gray-500 leading-relaxed">
                 시험일까지 시간이 많지 않은 수험생을 위한 단기 압축 플랜
               </p>
               <ul className="mt-4 space-y-1.5 text-sm text-gray-600 flex-1">
-                {['AI 초기 진단', '약점 분석', 'D-day 압축 전략', '오답 기록', '약점 체크리스트'].map((item) => (
+                {['초기 진단', '약점 분석', 'D-day 압축 전략', '오답 기록', '약점 체크리스트'].map((item) => (
                   <li key={item} className="flex items-center gap-2">
                     <span className="text-green-500">✓</span>{item}
                   </li>
@@ -424,15 +412,16 @@ const LandingPage = () => {
                   가장 많이 선택
                 </span>
               </div>
-              <div className="text-xs font-semibold text-primary-500 mb-2 mt-2">추천 플랜</div>
-              <div className="text-lg font-bold text-gray-900">30일 집중 플랜</div>
+              <p className="text-xs font-medium text-primary-700 mb-2 mt-2">이번 시험 전 방향 잡고 싶은 사람</p>
+              <div className="text-xs font-semibold text-primary-500 mb-1">추천 플랜</div>
+              <div className="text-lg font-bold text-gray-900">표준 점수 상승</div>
               <div className="mt-2 text-2xl font-bold text-primary-700">49,900원</div>
               <p className="mt-2 text-xs text-gray-500 leading-relaxed">
                 약점 진단부터 집중 교정까지 가장 균형 있게 사용할 수 있는 추천 플랜
               </p>
               <ul className="mt-4 space-y-1.5 text-sm text-gray-600 flex-1">
                 {[
-                  'AI 점수 진단',
+                  '점수 진단',
                   '핵심 약점 분석',
                   'D-day 맞춤 전략',
                   '오답 기록 및 정밀 보정',
@@ -456,15 +445,16 @@ const LandingPage = () => {
 
             {/* 플랜 3: 60일 */}
             <div className="rounded-2xl border border-gray-200 bg-white p-6 flex flex-col">
-              <div className="text-xs font-semibold text-gray-500 mb-2">장기 준비용</div>
-              <div className="text-lg font-bold text-gray-900">60일 안정 플랜</div>
+              <p className="text-xs font-medium text-primary-700 mb-2">850 이상 정체 구간 탈출하고 싶은 사람</p>
+              <div className="text-xs font-semibold text-gray-500 mb-1">장기 준비용</div>
+              <div className="text-lg font-bold text-gray-900">정체 탈출 집중</div>
               <div className="mt-2 text-2xl font-bold text-gray-900">79,900원</div>
               <p className="mt-2 text-xs text-gray-500 leading-relaxed">
                 시간 여유가 있는 수험생을 위한 안정형 플랜
               </p>
               <ul className="mt-4 space-y-1.5 text-sm text-gray-600 flex-1">
                 {[
-                  'AI 점수 진단',
+                  '점수 진단',
                   '약점 분석',
                   'D-day 맞춤 전략',
                   '오답 기록',
@@ -498,7 +488,7 @@ const LandingPage = () => {
             지금 내 점수를 가장 많이 깎는 원인을 먼저 줄이는 것이 중요합니다.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm text-gray-600">
-            <span>🎯 AI 약점 분석</span>
+            <span>🎯 약점 분석</span>
             <span>📉 점수 손실 원인 진단</span>
             <span>📅 시험일까지 압축 전략</span>
           </div>
@@ -507,7 +497,7 @@ const LandingPage = () => {
             onClick={handleMainCta}
             className="mt-8 rounded-xl bg-amber-400 px-10 py-4 text-lg font-bold text-gray-900 hover:bg-amber-300"
           >
-            무료 점수 진단 받기 →
+            무료로 시작하기 →
           </button>
           <p className="mt-4 text-xs text-gray-400">또는</p>
           <button
@@ -524,9 +514,10 @@ const LandingPage = () => {
       {/* ── 9. 신뢰 문구 (푸터 직전) ── */}
       <section className="border-t border-gray-100 bg-gray-50 px-4 py-10">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm text-gray-500 leading-relaxed">
-            토답은 문제를 더 많이 풀게 만드는 서비스가 아니라,<br />
-            <strong className="text-gray-700">점수를 가장 많이 깎는 원인을 먼저 줄이게 만드는 서비스</strong>입니다.
+          <p className="text-sm text-gray-600 leading-relaxed">
+            토답은 문제를 더 많이 풀게 만드는 서비스가 아닙니다.
+            <br />
+            점수를 가장 많이 깎는 원인을 먼저 줄이는 서비스입니다.
           </p>
         </div>
       </section>

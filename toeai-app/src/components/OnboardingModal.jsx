@@ -19,9 +19,9 @@ const STEPS = [
   },
   {
     emoji: '🤖',
-    badge: 'AI 분석',
-    title: 'AI가 내 약점 패턴을 찾아내요',
-    desc: '문제를 쌓을수록 AI가\n자주 틀리는 유형(태그)과\n점수에 영향 큰 약점을 순위로 보여줘요.',
+    badge: '약점 분석',
+    title: '내 약점 패턴을 자동으로 찾아내요',
+    desc: '문제를 쌓을수록\n자주 틀리는 유형(태그)과\n점수에 영향 큰 약점을 순위로 보여줘요.',
     tip: '오답 3개만 쌓여도 분석이 시작돼요',
   },
   {
@@ -188,7 +188,7 @@ export default function OnboardingModal() {
         {/* 하단 안내 */}
         {isLast && (
           <p className="text-center text-xs text-gray-400 mt-3">
-            로그인하면 오답 저장·AI 분석이 활성화돼요
+            로그인하면 오답 저장·약점 분석이 활성화돼요
           </p>
         )}
       </div>
