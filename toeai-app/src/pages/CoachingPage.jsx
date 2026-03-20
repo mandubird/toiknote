@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useListVersion } from '../contexts/RefreshListContext'
 import { getDashboardSummary } from '../services/programService'
 import { getSubscription } from '../services/subscription'
 import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
@@ -11,6 +12,9 @@ import {
   getPublicProofReviewCount,
   fetchPublicProofReviews,
 } from '../services/proofReviewService'
+import { getOnboardingCoaching } from '../services/getOnboardingCoaching'
+import OnboardingDiagnosis from '../components/OnboardingDiagnosis'
+import OnboardingResult from '../components/OnboardingResult'
 import ReviewStep2Modal from '../components/review/ReviewStep2Modal'
 import ProofReviewCard from '../components/review/ProofReviewCard'
 
@@ -52,6 +56,7 @@ function formatDday(examDate) {
 export default function CoachingPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const listVersion = useListVersion()
   const [dashboard, setDashboard] = useState(null)
   const [sub, setSub] = useState({ paid: false })
   const [wrongCount, setWrongCount] = useState(0)
@@ -61,61 +66,131 @@ export default function CoachingPage() {
   const [showReviewStep2, setShowReviewStep2] = useState(false)
   const [socialProofList, setSocialProofList] = useState([])
   const [socialProofCount, setSocialProofCount] = useState(0)
+  const [onboardingView, setOnboardingView] = useState(null) // 'ai' | 'diagnosis' | 'temporary'
+  const [onboardingInputs, setOnboardingInputs] = useState(null)
+  const [onboardingExampleMode, setOnboardingExampleMode] = useState(false)
+
+  const ONBOARDING_INPUTS_KEY = 'todap_onboarding_inputs'
+  const ONBOARDING_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000
+
+  const loadOnboardingInputs = () => {
+    try {
+      const raw = localStorage.getItem(ONBOARDING_INPUTS_KEY)
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== 'object') return null
+      const savedAt = parsed.saved_at
+      if (typeof savedAt !== 'number') return null
+      if (Date.now() - savedAt > ONBOARDING_EXPIRY_MS) {
+        localStorage.removeItem(ONBOARDING_INPUTS_KEY)
+        return null
+      }
+
+      const weakPartOk = ['LC', 'RC', 'Part5', 'Part7'].includes(parsed.weak_part)
+      if (!weakPartOk) return null
+
+      return parsed
+    } catch {
+      return null
+    }
+  }
 
   useEffect(() => {
     if (!user) {
       setDashboard(null)
       setSub({ paid: false })
       setWrongCount(0)
+      setChecklist([])
+      setMyProofReview(null)
+      setOnboardingView(null)
+      setOnboardingInputs(null)
+      setOnboardingExampleMode(false)
       setLoading(false)
       return
     }
+    let cancelled = false
     setLoading(true)
 
     // 코칭 화면 진입 로그 (coaching_logs) — KPI용
-    // Supabase 쿼리 빌더는 PostgrestBuilder를 반환하므로, 여기서는 에러를 무시하고 fire-and-forget으로 호출만 한다.
-    // (에러가 나더라도 코칭 화면 렌더링에는 영향을 주지 않도록 await/then/catch를 붙이지 않는다.)
-    supabase.from('coaching_logs').insert({ user_id: user.id })
+    supabase.from('coaching_logs').insert({ user_id: user.id }).catch(() => {})
 
-    Promise.all([
-      getDashboardSummary(user.id).catch(() => null),
-      getSubscription(user.id).catch(() => ({ paid: false })),
-      fetchWrongAnswers(user.id).then((list) => list?.length ?? 0).catch(() => 0),
-      getMasteryBoard(user.id).catch(() => []),
-    ])
-      .then(async ([d, s, wc, board]) => {
-        setDashboard(d)
+    ;(async () => {
+      try {
+        const [wcList, s] = await Promise.all([
+          fetchWrongAnswers(user.id).catch(() => []),
+          getSubscription(user.id).catch(() => ({ paid: false })),
+        ])
+
+        const wc = wcList?.length ?? 0
+        const localInputs = wc >= 3 ? null : loadOnboardingInputs()
+
         setSub(s)
         setWrongCount(wc)
-        setChecklist(Array.isArray(board) ? board : [])
 
-        // 활성화 조건 체크:
-        // ① 약점 TOP3 확인 가능 (dashboard.weakness_top3 존재)
-        // ② 오늘 할 일 3개 확인 가능 (checklist 또는 fallback)
-        // ③ 오답 1개 이상 등록 (wrongCount > 0)
-        if (wc > 0 && (d?.weakness_top3?.length ?? 0) > 0) {
-          // 이미 활성화된 유저는 업데이트하지 않음
-          await supabase
-            .from('users')
-            .update({ activated_at: new Date().toISOString() })
-            .eq('id', user.id)
-            .is('activated_at', null)
-            .catch(() => {})
+        if (wc >= 3) {
+          // 정밀 코칭 모드: 기존 AI 결과 그대로 사용
+          const [d, board] = await Promise.all([
+            getDashboardSummary(user.id).catch(() => null),
+            getMasteryBoard(user.id).catch(() => []),
+          ])
+
+          if (cancelled) return
+
+          setDashboard(d)
+          setChecklist(Array.isArray(board) ? board : [])
+          setOnboardingView('ai')
+          setOnboardingInputs(null)
+          setOnboardingExampleMode(false)
+
+          // 활성화 조건 체크 (기존 로직 유지)
+          if (wc > 0 && (d?.weakness_top3?.length ?? 0) > 0) {
+            await supabase
+              .from('users')
+              .update({ activated_at: new Date().toISOString() })
+              .eq('id', user.id)
+              .is('activated_at', null)
+              .catch(() => {})
+          }
+        } else if (localInputs) {
+          // 임시 코칭 모드: rule-based 결과 출력 (API 호출 없음)
+          if (cancelled) return
+          setDashboard(null)
+          setChecklist([])
+          setOnboardingView('temporary')
+          setOnboardingInputs(localInputs)
+          setOnboardingExampleMode(false)
+        } else {
+          // 온보딩 진단 유도 모드
+          if (cancelled) return
+          setDashboard(null)
+          setChecklist([])
+          setOnboardingView('diagnosis')
+          setOnboardingInputs(null)
+          setOnboardingExampleMode(false)
         }
-      })
-      .finally(() => setLoading(false))
-  }, [user?.id])
+      } catch (e) {
+        console.error('[CoachingPage] onboarding branching error:', e)
+        if (!cancelled) setOnboardingView('diagnosis')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, listVersion])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id || onboardingView !== 'ai') {
       setMyProofReview(null)
       return
     }
     fetchMyProofReview(user.id).then(setMyProofReview)
-  }, [user?.id])
+  }, [user?.id, onboardingView])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || onboardingView !== 'ai') return
     getPublicProofReviewCount().then((n) => {
       setSocialProofCount(n)
       if (n >= 3) {
@@ -124,7 +199,7 @@ export default function CoachingPage() {
         setSocialProofList([])
       }
     })
-  }, [user?.id])
+  }, [user?.id, onboardingView])
 
   const dday = useMemo(() => formatDday(dashboard?.examDate), [dashboard?.examDate])
   const top3 = useMemo(() => dashboard?.weakness_top3 || [], [dashboard?.weakness_top3])
@@ -155,6 +230,49 @@ export default function CoachingPage() {
         </button>
       </div>
     )
+  }
+
+  // 온보딩 v1.1: 오답<3이면 localStorage 입력 기반 rule-based 결과 또는 4문항 진단을 보여줌
+  if (onboardingView !== 'ai') {
+    const coaching = onboardingInputs ? getOnboardingCoaching(onboardingInputs) : null
+    if (onboardingView === 'diagnosis') {
+      return (
+        <div className="p-4 pb-8">
+          <OnboardingDiagnosis
+            onSubmit={(inputs) => {
+              setOnboardingInputs(inputs)
+              setOnboardingExampleMode(false)
+              setOnboardingView('temporary')
+            }}
+            onExample={(exampleInputs) => {
+              setOnboardingInputs(exampleInputs)
+              setOnboardingExampleMode(true)
+              setOnboardingView('temporary')
+            }}
+            disabled={false}
+          />
+        </div>
+      )
+    }
+
+    if (onboardingView === 'temporary') {
+      return (
+        <div className="p-4 pb-8">
+          <OnboardingResult
+            coaching={coaching}
+            exampleMode={onboardingExampleMode}
+            onRegisterWrong3={() => navigate('/notes')}
+            onGoPayment={() => navigate('/settings?pay=1')}
+            onDirectDiagnose={() => {
+              setOnboardingExampleMode(false)
+              setOnboardingView('diagnosis')
+            }}
+          />
+        </div>
+      )
+    }
+
+    return null
   }
 
   return (

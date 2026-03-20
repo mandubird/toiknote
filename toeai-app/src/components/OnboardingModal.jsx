@@ -58,7 +58,7 @@ export default function OnboardingModal() {
 
   const handleStart = () => {
     dismiss()
-    navigate('/settings')   // 로그인·목표 점수 입력 유도
+    navigate('/')   // CoachingPage에서 온보딩 진단/결과 흐름이 노출됨
   }
 
   const handleSkip = () => dismiss()
