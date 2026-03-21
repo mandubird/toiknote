@@ -171,7 +171,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       <div className="bg-white w-full max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-w-lg mx-auto overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900">
-            {step === 1 ? '1단계: 분석 결과 확인' : '2단계: 수정 후 저장'}
+            {step === 1 ? '1단계: 분석 결과 확인' : '2단계: 오답 원인 선택 (코칭 정확도 향상)'}
             {multiTotal > 1 && (
               <span className="ml-2 text-xs font-normal text-gray-500">
                 ({multiIndex + 1}/{multiTotal})
@@ -464,6 +464,11 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
           )}
         </div>
 
+        {step === 2 && userSelectedTags.length === 0 && (
+          <p className="px-4 pt-2 text-xs text-amber-600 text-center">
+            💡 오답 원인을 1개 이상 선택하면 코칭이 더 정확해져요
+          </p>
+        )}
         <div className="p-4 border-t border-gray-200 flex gap-2">
           {step === 1 ? (
             <>
@@ -479,7 +484,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                 onClick={() => setStep(2)}
                 className="flex-1 py-2.5 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
               >
-                수정하고 저장
+                세부 정보 입력하기 →
               </button>
             </>
           ) : (
@@ -497,7 +502,7 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
                 disabled={saving}
                 className="flex-1 py-2.5 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
               >
-                {saving ? '저장 중…' : '저장'}
+                {saving ? '저장 중…' : '코칭 생성하기'}
               </button>
             </>
           )}
