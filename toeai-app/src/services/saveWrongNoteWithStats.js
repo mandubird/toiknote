@@ -90,15 +90,31 @@ export async function saveWrongNoteWithStats(userId, data) {
       p_part6_blank_type: data.part6BlankType ?? null,
       p_part6_context_fail_reason: data.part6ContextFailReason ?? null,
       p_reread_count: data.rereadCount != null && data.rereadCount >= 0 ? Number(data.rereadCount) : null,
+      p_problem_type_id:
+        data.problemTypeId != null && Number.isFinite(Number(data.problemTypeId))
+          ? Number(data.problemTypeId)
+          : null,
     })
 
     if (error) throw error
 
+    const wrongAnswerId =
+      typeof noteId === 'string' ? noteId : noteId != null ? String(noteId) : null
+
+    // 사전 태그 선택 로그 (비필수)
+    if (wrongAnswerId && Array.isArray(data.dictionaryTagIds) && data.dictionaryTagIds.length) {
+      const rows = data.dictionaryTagIds.map((tid) => ({
+        problem_id: wrongAnswerId,
+        tag_id: Number(tid),
+      }))
+      const { error: tagLogErr } = await supabase.from('problem_tag_logs').insert(rows)
+      if (tagLogErr) console.warn('problem_tag_logs 저장 실패 (비필수):', tagLogErr)
+    }
+
     // LC 오류 원인 로그 저장 (비필수 — 실패해도 저장 성공으로 처리)
-    const wrongAnswerId = typeof noteId === 'string' ? noteId : null
     saveLcErrorLog(userId, partNumber, data.userSelectedTags, wrongAnswerId)
 
-    return { success: true }
+    return { success: true, wrongAnswerId }
   } catch (err) {
     const item = { userId, ...data, failedAt: Date.now() }
     const pending = getPendingWrongAnswers()

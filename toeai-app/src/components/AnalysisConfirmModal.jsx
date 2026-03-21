@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import ProblemInputCard from './ProblemInputCard'
+import WeaknessTagSelector from './WeaknessTagSelector'
+import { fetchProblemTypesByPart, fetchTagDictionaryByProblemType } from '../services/problemTypeService'
 
 // LC 오답 원인 → 즉각 코치 팁 매핑
 const LC_COACH_TIPS = {
@@ -10,48 +13,28 @@ const LC_COACH_TIPS = {
   노트테이킹실패: 'Part 4는 노트테이킹이 핵심이에요. 숫자·장소·시간 위주로 짧게 메모하는 연습을 해보세요.',
 }
 
-// STEP 4: 파트별 세부 태그 옵션 (여러 개 선택 가능)
-const PART_TAG_OPTIONS = {
-  5: [
-    { label: '시제 관련', options: ['현재완료', '과거시제', '미래시제', '시제일치'] },
-    { label: '관계대명사', options: ['주격', '목적격', '소유격', '선행사불일치'] },
-    { label: '기타', options: ['수일치', '전치사', '접속사', '분사', '가정법', '비교급', '어휘'] },
-  ],
-  6: [
-    { label: '빈칸 유형', options: ['문장삽입', '문법', '어휘', '연결어'] },
-    { label: '문맥', options: ['앞문장미이해', '전체흐름미파악'] },
-  ],
-  7: [
-    { label: '지문', options: ['단일지문', '이중지문', '삼중지문'] },
-    { label: '문제 유형', options: ['사실확인', '추론', '어휘', '의도파악', '문장삽입'] },
-  ],
-  2: [
-    { label: '질문 패턴', options: ['의문사질문', '일반의문문', '부정의문문', '선택의문문', '제안/요청', '평서문'] },
-    { label: '답변 유형', options: ['직접답변', '우회답변', '부정응답'] },
-    { label: '오답 원인', options: ['발음혼동', '속도못따라감', '어휘몰라서', '집중력분산'] },
-  ],
-  1: [
-    { label: '함정', options: ['동작함정', '위치함정', '유사발음', '수동태'] },
-    { label: '오답 원인', options: ['발음혼동', '집중력분산', '어휘몰라서'] },
-  ],
-  3: [
-    { label: '유형', options: ['주제', '세부정보', '추론', '의도파악', '다음행동'] },
-    { label: '오답 원인', options: ['속도못따라감', '집중력분산', '어휘몰라서', '선택지오해'] },
-  ],
-  4: [
-    { label: '담화', options: ['공지', '안내방송', '광고', '회의', '전화메시지'] },
-    { label: '유형', options: ['주제', '세부정보', '추론'] },
-    { label: '오답 원인', options: ['속도못따라감', '집중력분산', '어휘몰라서', '노트테이킹실패'] },
-  ],
+/** LC 전용: 코칭 로그용 추가 칩 (명세상 사전 태그와 별도) */
+const LC_EXTRA_CHIPS = {
+  1: ['발음혼동', '집중력분산', '어휘몰라서'],
+  2: ['발음혼동', '속도못따라감', '어휘몰라서', '집중력분산', '선택지오해'],
+  3: ['속도못따라감', '집중력분산', '어휘몰라서', '선택지오해'],
+  4: ['속도못따라감', '집중력분산', '어휘몰라서', '노트테이킹실패'],
 }
 
-const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, saving, multiTotal = 1, multiIndex = 0 }) => {
-  const [step, setStep] = useState(1)
+const AnalysisConfirmModal = ({
+  open,
+  onClose,
+  initialData,
+  imageUrl,
+  onSave,
+  saving,
+  multiTotal = 1,
+  multiIndex = 0,
+}) => {
   const [part, setPart] = useState('')
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [explanation, setExplanation] = useState('')
-  const [tags, setTags] = useState('')
   const [lcOrRc, setLcOrRc] = useState('RC')
   const [difficulty, setDifficulty] = useState(2)
   const [partNumber, setPartNumber] = useState(5)
@@ -61,38 +44,75 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
   const [rereadCount, setRereadCount] = useState('')
   const [selectedOption, setSelectedOption] = useState(null)
 
+  const [problemTypes, setProblemTypes] = useState([])
+  const [problemTypeId, setProblemTypeId] = useState(null)
+  const [dictionaryTags, setDictionaryTags] = useState([])
+  const [selectedDictionaryTagIds, setSelectedDictionaryTagIds] = useState([])
+
+  const resetFormFromInitial = useCallback(() => {
+    if (!initialData) return
+    setPart(initialData.part || '')
+    setQuestion(initialData.question || '')
+    const rawAnswer = initialData.answer || ''
+    setAnswer(rawAnswer === '-' ? '' : rawAnswer)
+    setExplanation(initialData.explanation || '')
+    setLcOrRc(initialData.lcOrRc === 'LC' ? 'LC' : 'RC')
+    setDifficulty([1, 2, 3].includes(Number(initialData.difficulty)) ? Number(initialData.difficulty) : 2)
+    setPartNumber(initialData.partNumber >= 1 && initialData.partNumber <= 7 ? initialData.partNumber : 5)
+    setUserSelectedTags([])
+    setTimeoutFlag(false)
+    setSolvingTime('')
+    setRereadCount(initialData?.rereadCount != null ? String(initialData.rereadCount) : '')
+    setProblemTypeId(null)
+    setDictionaryTags([])
+    setSelectedDictionaryTagIds([])
+    if (initialData.options && typeof initialData.options === 'object' && initialData.answer) {
+      const m = String(initialData.answer).trim().match(/^([A-Da-d])/)
+      setSelectedOption(m ? m[1].toUpperCase() : null)
+    } else {
+      setSelectedOption(null)
+    }
+  }, [initialData])
+
   useEffect(() => {
     if (open && initialData) {
-      setStep(1)
-      setPart(initialData.part || '')
-      setQuestion(initialData.question || '')
-      const rawAnswer = initialData.answer || ''
-      setAnswer(rawAnswer === '-' ? '' : rawAnswer)
-      setExplanation(initialData.explanation || '')
-      setTags(Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '')
-      setLcOrRc(initialData.lcOrRc === 'LC' ? 'LC' : 'RC')
-      setDifficulty([1, 2, 3].includes(Number(initialData.difficulty)) ? Number(initialData.difficulty) : 2)
-      setPartNumber(initialData.partNumber >= 1 && initialData.partNumber <= 7 ? initialData.partNumber : 5)
-      setUserSelectedTags([])
-      setTimeoutFlag(false)
-      setSolvingTime('')
-      setRereadCount(initialData?.rereadCount != null ? String(initialData.rereadCount) : '')
-      // 정답이 "B. which" 형태면 선택된 보기로 반영
-      if (initialData.options && typeof initialData.options === 'object' && initialData.answer) {
-        const m = String(initialData.answer).trim().match(/^([A-Da-d])/)
-        setSelectedOption(m ? m[1].toUpperCase() : null)
-      } else {
-        setSelectedOption(null)
-      }
+      resetFormFromInitial()
     }
-  }, [open, initialData])
+  }, [open, initialData, resetFormFromInitial])
+
+  useEffect(() => {
+    if (!open) return
+    setProblemTypes([])
+    let cancelled = false
+    ;(async () => {
+      const rows = await fetchProblemTypesByPart(partNumber)
+      if (!cancelled) setProblemTypes(rows)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, partNumber])
+
+  useEffect(() => {
+    if (!open || problemTypeId == null) {
+      setDictionaryTags([])
+      setSelectedDictionaryTagIds([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const t = await fetchTagDictionaryByProblemType(problemTypeId)
+      if (!cancelled) {
+        setDictionaryTags(t)
+        setSelectedDictionaryTagIds((prev) => prev.filter((id) => t.some((r) => Number(r.id) === Number(id))))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, problemTypeId])
 
   if (!open) return null
-
-  const tagsArray = tags
-    .split(/[,，\s]+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
 
   const toggleUserTag = (tag) => {
     setUserSelectedTags((prev) =>
@@ -100,11 +120,35 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
     )
   }
 
+  const ptRow = (problemTypes || []).find((r) => Number(r.id) === Number(problemTypeId))
+
+  const buildSegmentFields = () => {
+    let grammarCategory = initialData?.grammarCategory ?? null
+    let grammarSubType = initialData?.grammarSubType ?? null
+    let passageType = initialData?.passageType ?? null
+    let questionType = initialData?.questionType ?? null
+    if (ptRow) {
+      if (partNumber === 5 || partNumber === 6) {
+        grammarCategory = ptRow.category_level1
+        grammarSubType = ptRow.category_level2
+      } else if (partNumber === 7) {
+        passageType = ptRow.category_level1
+        questionType = ptRow.category_level2
+      }
+    }
+    return { grammarCategory, grammarSubType, passageType, questionType }
+  }
+
   const handleSave = () => {
     if (!answer.trim()) {
-      alert('정답을 입력해 주세요.')
+      alert('정답을 입력하거나 보기에서 선택해 주세요.')
       return
     }
+    if (problemTypes.length > 0 && !problemTypeId) {
+      alert('문제 유형(1차·2차)을 선택해 주세요.')
+      return
+    }
+
     const rereadVal =
       rereadCount.trim() !== '' && /^\d+$/.test(rereadCount.trim())
         ? parseInt(rereadCount.trim(), 10)
@@ -124,11 +168,16 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
     }
 
     const vocabTags = (initialData?.keyVocabulary || []).map((v) => `어휘:${v}`)
-    const mergedTags = [...new Set([...tagsArray, ...vocabTags])]
+    const dictNames = dictionaryTags
+      .filter((t) => selectedDictionaryTagIds.includes(Number(t.id)))
+      .map((t) => t.tag_name)
+    const mergedTags = [...new Set([...dictNames, ...vocabTags])]
+
+    const seg = buildSegmentFields()
 
     onSave({
       imageUrl,
-      part,
+      part: part || `Part ${partNumber}`,
       partNumber,
       lcOrRc,
       question,
@@ -136,16 +185,15 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       explanation,
       tags: mergedTags,
       difficulty,
-      grammarCategory: initialData?.grammarCategory ?? null,
-      grammarSubType: initialData?.grammarSubType ?? null,
-      passageType: initialData?.passageType ?? null,
-      questionType: initialData?.questionType ?? null,
+      grammarCategory: seg.grammarCategory,
+      grammarSubType: seg.grammarSubType,
+      passageType: seg.passageType,
+      questionType: seg.questionType,
       questionPattern: initialData?.questionPattern ?? null,
       answerType: initialData?.answerType ?? null,
       userSelectedTags,
       timeoutFlag,
       solvingTime: solvingTime.trim() !== '' && /^\d+$/.test(solvingTime.trim()) ? parseInt(solvingTime.trim(), 10) : null,
-      // v4.01 전파트
       part1ImageTrapType: initialData?.part1ImageTrapType ?? null,
       part1KeywordMissed: initialData?.part1KeywordMissed ?? null,
       part1PassiveVoiceError: initialData?.part1PassiveVoiceError,
@@ -160,24 +208,35 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       part6ContextFailReason: initialData?.part6ContextFailReason ?? null,
       rereadCount: rereadVal,
       options: initialData?.options ?? null,
+      problemTypeId,
+      dictionaryTagIds: selectedDictionaryTagIds,
     })
   }
 
-  const segmentOptions = PART_TAG_OPTIONS[partNumber] || []
   const showTimeoutCheck = partNumber >= 5 && partNumber <= 7
+  const lcChips = LC_EXTRA_CHIPS[partNumber] || []
+  const lcCause = userSelectedTags.find((t) => LC_COACH_TIPS[t])
+
+  const syncPartFromNumber = (n) => {
+    setPartNumber(n)
+    setPart(`Part ${n}`)
+    setLcOrRc(n >= 1 && n <= 4 ? 'LC' : 'RC')
+    setProblemTypeId(null)
+  }
 
   return (
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
       <div className="bg-white w-full max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-w-lg mx-auto overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900">
-            {step === 1 ? '1단계: 분석 결과 확인' : '2단계: 오답 원인 선택 (코칭 정확도 향상)'}
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">문제를 분석했습니다</h2>
+            <p className="text-xs text-gray-500 mt-0.5">필요한 부분만 확인해 주세요</p>
             {multiTotal > 1 && (
-              <span className="ml-2 text-xs font-normal text-gray-500">
+              <span className="text-xs font-normal text-gray-400">
                 ({multiIndex + 1}/{multiTotal})
               </span>
             )}
-          </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -191,321 +250,237 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {step === 1 ? (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">파트</label>
-                <p className="text-gray-900 font-medium">{part || '-'} · {lcOrRc}</p>
+          <ProblemInputCard
+            key={partNumber}
+            partNumber={partNumber}
+            onPartNumberChange={syncPartFromNumber}
+            problemTypes={problemTypes}
+            problemTypeId={problemTypeId}
+            onProblemTypeChange={setProblemTypeId}
+            disabled={saving}
+          />
+
+          <WeaknessTagSelector
+            tags={dictionaryTags}
+            selectedTagIds={selectedDictionaryTagIds}
+            onChange={setSelectedDictionaryTagIds}
+            disabled={saving}
+          />
+
+          {partNumber >= 1 && partNumber <= 4 && lcChips.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-500">듣기 오답 패턴 (선택, 코칭 연결)</label>
+              <div className="flex flex-wrap gap-1.5">
+                {lcChips.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => toggleUserTag(opt)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                      userSelectedTags.includes(opt)
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">난이도</label>
-                <p className="text-gray-900 font-medium">{difficulty === 1 ? '쉬움' : difficulty === 3 ? '어려움' : '보통'}</p>
+            </div>
+          )}
+
+          {lcCause && (
+            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-xs font-semibold text-blue-700 mb-1">💡 AI 코치 조언</p>
+              <p className="text-xs text-blue-800 leading-relaxed">{LC_COACH_TIPS[lcCause]}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div>
+              <span className="text-gray-400">난이도</span>{' '}
+              <span className="font-medium text-gray-800">
+                {difficulty === 1 ? '쉬움' : difficulty === 3 ? '어려움' : '보통'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">구분</span>{' '}
+              <span className="font-medium text-gray-800">{lcOrRc}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">문제 (필요 시 수정)</label>
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
+              placeholder="문제 텍스트"
+            />
+          </div>
+
+          {initialData?.options && Object.keys(initialData.options || {}).length > 0 ? (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">정답 (보기에서 선택)</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {['A', 'B', 'C', 'D'].map((key) => {
+                  const text = initialData.options?.[key]
+                  if (!text) return null
+                  const isSelected = selectedOption === key
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedOption(key)
+                        setAnswer(`${key}. ${text}`)
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                        isSelected
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                      }`}
+                    >
+                      {key}. {text}
+                    </button>
+                  )
+                })}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">문제</label>
-                <p className="text-gray-800 text-sm whitespace-pre-wrap">{question || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">정답 (필수)</label>
-                <p className="text-gray-900 font-medium">{answer || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">해설</label>
-                <p className="text-gray-800 text-sm whitespace-pre-wrap">{explanation || '-'}</p>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">태그</label>
-                <div className="flex flex-wrap gap-1">
-                  {tagsArray.length
-                    ? tagsArray.map((t, i) => (
-                        <span
-                          key={i}
-                          className="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded"
-                        >
-                          #{t}
-                        </span>
-                      ))
-                    : '-'}
-                </div>
-              </div>
-              {initialData?.options && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">보기</label>
-                  <div className="text-sm text-gray-800 space-y-0.5">
-                    {['A', 'B', 'C', 'D'].map((key) => {
-                      const text = initialData.options?.[key]
-                      if (!text) return null
-                      const isCorrect =
-                        answer &&
-                        (answer.trim().toUpperCase() === key ||
-                          answer.trim().toUpperCase().startsWith(key + '.'))
-                      return (
-                        <p
-                          key={key}
-                          className={isCorrect ? 'font-semibold text-primary-700' : ''}
-                        >
-                          {key}. {text}
-                          {isCorrect ? ' ← 정답 후보' : ''}
-                        </p>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-              {/* 핵심 어휘 (어휘 문제일 때만) */}
-              {initialData?.keyVocabulary?.length > 0 && (
-                <div className="pt-2 border-t border-gray-100">
-                  <label className="block text-xs font-medium text-amber-700 mb-1">📖 핵심 단어/표현</label>
-                  <div className="flex flex-wrap gap-1">
-                    {initialData.keyVocabulary.map((v, i) => (
-                      <span key={i} className="text-xs px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">저장 시 단어장에 자동 추가돼요</p>
-                </div>
-              )}
-              {/* STEP 3 + v4.01: 세부 분류 (전파트) */}
-              {(initialData?.grammarCategory || initialData?.passageType || initialData?.questionPattern || initialData?.part1ImageTrapType || initialData?.part3QuestionType || initialData?.part4LectureType || initialData?.part6BlankType || initialData?.rereadCount != null) && (
-                <div className="pt-2 border-t border-gray-100">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">AI 세부 분류</label>
-                  <div className="text-xs text-gray-700 space-y-0.5">
-                    {initialData.part1ImageTrapType && <p>Part 1 함정: {initialData.part1ImageTrapType}{initialData.part1KeywordMissed ? ` · 놓친 키워드: ${initialData.part1KeywordMissed}` : ''}{initialData.part1PassiveVoiceError ? ' · 수동태 오류' : ''}</p>}
-                    {initialData.questionPattern && <p>Part 2: {initialData.questionPattern} · {initialData.answerType || '-'}</p>}
-                    {initialData.part3QuestionType && <p>Part 3: {initialData.part3QuestionType}{initialData.part3SetPosition ? ` (${initialData.part3SetPosition}번 문제)` : ''}{initialData.part3ConcentrationDrop ? ' · 집중력 저하 추정' : ''}</p>}
-                    {initialData.part4LectureType && <p>Part 4: {initialData.part4LectureType} · {initialData.part4QuestionType || '-'}{initialData.part4NoteTaking ? ' · 노트테이킹' : ''}</p>}
-                    {initialData.grammarCategory && <p>Part 5 문법: {initialData.grammarCategory}{initialData.grammarSubType ? ` (${initialData.grammarSubType})` : ''}</p>}
-                    {initialData.part6BlankType && <p>Part 6: {initialData.part6BlankType}{initialData.part6ContextFailReason ? ` · ${initialData.part6ContextFailReason}` : ''}</p>}
-                    {(initialData.passageType || initialData.questionType || initialData.rereadCount != null) && (
-                      <p>Part 7: {[initialData.passageType, initialData.questionType].filter(Boolean).join(' · ') || '-'}{initialData.rereadCount != null ? ` · 재읽기 ${initialData.rereadCount}회` : ''}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           ) : (
-            <>
-              {/* STEP 4: 파트별 세부 태그 (여러 개 선택 가능) */}
-              {segmentOptions.length > 0 && (
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-gray-500">🏷️ 세부 유형 선택 (여러 개 가능)</label>
-                  {segmentOptions.map((group, gi) => (
-                    <div key={gi}>
-                      <p className="text-xs text-gray-500 mb-1">{group.label}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {group.options.map((opt) => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => toggleUserTag(opt)}
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                              userSelectedTags.includes(opt)
-                                ? 'bg-primary-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {/* LC 오답 원인 코치 팁 */}
-              {partNumber >= 1 && partNumber <= 4 && (() => {
-                const lcCause = userSelectedTags.find((t) => LC_COACH_TIPS[t])
-                if (!lcCause) return null
-                return (
-                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                    <p className="text-xs font-semibold text-blue-700 mb-1">💡 AI 코치 조언</p>
-                    <p className="text-xs text-blue-800 leading-relaxed">{LC_COACH_TIPS[lcCause]}</p>
-                  </div>
-                )
-              })()}
-              {showTimeoutCheck && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={timeoutFlag}
-                    onChange={(e) => setTimeoutFlag(e.target.checked)}
-                    className="rounded border-gray-300 text-primary-600"
-                  />
-                  <span className="text-sm text-gray-700">⏱️ 시간 부족으로 찍음</span>
-                </label>
-              )}
-              {(partNumber === 5 || partNumber === 6 || partNumber === 7) && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">풀이 시간 (초, 선택)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={600}
-                    value={solvingTime}
-                    onChange={(e) => setSolvingTime(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    placeholder="예: 90"
-                  />
-                </div>
-              )}
-              {partNumber === 7 && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">지문 재읽기 횟수 (선택)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={rereadCount}
-                    onChange={(e) => setRereadCount(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    placeholder="예: 1"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">파트</label>
-                <select
-                  value={part}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setPart(v)
-                    const numMatch = v.match(/(\d+)/)
-                    if (numMatch) {
-                      const n = parseInt(numMatch[1], 10)
-                      if (n >= 1 && n <= 7) setPartNumber(n)
-                    }
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                >
-                  <option value="">파트 선택</option>
-                  <option value="Part 1">Part 1 (LC)</option>
-                  <option value="Part 2">Part 2 (LC)</option>
-                  <option value="Part 3">Part 3 (LC)</option>
-                  <option value="Part 4">Part 4 (LC)</option>
-                  <option value="Part 5">Part 5 (RC)</option>
-                  <option value="Part 6">Part 6 (RC)</option>
-                  <option value="Part 7">Part 7 (RC)</option>
-                </select>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">정답 (필수)</label>
+              <input
+                type="text"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="정답"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">해설 (선택)</label>
+            <textarea
+              value={explanation}
+              onChange={(e) => setExplanation(e.target.value)}
+              rows={2}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
+              placeholder="필요할 때만 수정"
+            />
+          </div>
+
+          {initialData?.keyVocabulary?.length > 0 && (
+            <div className="pt-2 border-t border-gray-100">
+              <label className="block text-xs font-medium text-amber-700 mb-1">📖 핵심 단어/표현</label>
+              <div className="flex flex-wrap gap-1">
+                {initialData.keyVocabulary.map((v, i) => (
+                  <span
+                    key={i}
+                    className="text-xs px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full"
+                  >
+                    {v}
+                  </span>
+                ))}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">문제</label>
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  rows={4}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
-                  placeholder="문제 텍스트"
-                />
+              <p className="text-xs text-gray-400 mt-1">저장 시 태그에 반영돼요</p>
+            </div>
+          )}
+
+          {(initialData?.grammarCategory ||
+            initialData?.passageType ||
+            initialData?.questionPattern ||
+            initialData?.part1ImageTrapType) && (
+            <details className="text-xs text-gray-600 border border-gray-100 rounded-lg p-2">
+              <summary className="cursor-pointer font-medium text-gray-500">AI 추정 분류 (참고)</summary>
+              <div className="mt-2 space-y-0.5 text-gray-600">
+                {initialData.part1ImageTrapType && (
+                  <p>
+                    Part 1: {initialData.part1ImageTrapType}
+                    {initialData.part1KeywordMissed ? ` · ${initialData.part1KeywordMissed}` : ''}
+                  </p>
+                )}
+                {initialData.questionPattern && (
+                  <p>
+                    Part 2: {initialData.questionPattern} · {initialData.answerType || '-'}
+                  </p>
+                )}
+                {initialData.grammarCategory && (
+                  <p>
+                    문법 추정: {initialData.grammarCategory}
+                    {initialData.grammarSubType ? ` (${initialData.grammarSubType})` : ''}
+                  </p>
+                )}
+                {(initialData.passageType || initialData.questionType) && (
+                  <p>
+                    독해 추정: {[initialData.passageType, initialData.questionType].filter(Boolean).join(' · ')}
+                  </p>
+                )}
               </div>
-              {initialData?.options && Object.keys(initialData.options || {}).length > 0 ? (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">
-                    정답 (보기에서 선택)
-                  </label>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {['A', 'B', 'C', 'D'].map((key) => {
-                      const text = initialData.options?.[key]
-                      if (!text) return null
-                      const isSelected = selectedOption === key
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => {
-                            setSelectedOption(key)
-                            setAnswer(`${key}. ${text}`)
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                            isSelected
-                              ? 'bg-primary-600 text-white border-primary-600'
-                              : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
-                          }`}
-                        >
-                          {key}. {text}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">정답</label>
-                  <input
-                    type="text"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    placeholder="A"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">해설</label>
-                <textarea
-                  value={explanation}
-                  onChange={(e) => setExplanation(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"
-                  placeholder="정답 해설"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">태그 (쉼표로 구분)</label>
-                <input
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="관계대명사, 현재완료"
-                />
-              </div>
-            </>
+            </details>
+          )}
+
+          {showTimeoutCheck && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={timeoutFlag}
+                onChange={(e) => setTimeoutFlag(e.target.checked)}
+                className="rounded border-gray-300 text-primary-600"
+              />
+              <span className="text-sm text-gray-700">⏱️ 시간 부족으로 찍음</span>
+            </label>
+          )}
+
+          {(partNumber === 5 || partNumber === 6 || partNumber === 7) && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">풀이 시간 (초, 선택)</label>
+              <input
+                type="number"
+                min={0}
+                max={600}
+                value={solvingTime}
+                onChange={(e) => setSolvingTime(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="예: 90"
+              />
+            </div>
+          )}
+
+          {partNumber === 7 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">지문 재읽기 횟수 (선택)</label>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={rereadCount}
+                onChange={(e) => setRereadCount(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="예: 1"
+              />
+            </div>
           )}
         </div>
 
-        {step === 2 && userSelectedTags.length === 0 && (
-          <p className="px-4 pt-2 text-xs text-amber-600 text-center">
-            💡 오답 원인을 1개 이상 선택하면 코칭이 더 정확해져요
-          </p>
-        )}
         <div className="p-4 border-t border-gray-200 flex gap-2">
-          {step === 1 ? (
-            <>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="flex-1 py-2.5 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
-              >
-                세부 정보 입력하기 →
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium"
-              >
-                뒤로
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 py-2.5 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
-              >
-                {saving ? '저장 중…' : '코칭 생성하기'}
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 py-2.5 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+          >
+            {saving ? '저장 중…' : '분석 저장하기'}
+          </button>
         </div>
       </div>
     </div>

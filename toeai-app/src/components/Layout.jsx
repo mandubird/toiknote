@@ -273,7 +273,7 @@ const Layout = () => {
       {/* AI 분석 중 오버레이 */}
       {analyzing && (
         <UploadProgressOverlay
-          message="AI가 문제 유형을 분석하고 있어요…"
+          message="이미지를 분석했습니다. 문제 유형만 선택하면 저장됩니다."
           hideProgress
         />
       )}
