@@ -19,9 +19,21 @@ export async function analyzeToeicImage(imageUrl) {
     body: { imageUrl },
   })
 
+  // 비-2xx여도 본문에 { error: "..." } 가 올 수 있음 (Supabase는 error.message만 generic으로 줌)
+  if (data?.error) {
+    throw new Error(typeof data.error === 'string' ? data.error : '사진 분석에 실패했어요.')
+  }
   if (error) {
-    console.error('analyze-toeic-image Edge Function 오류:', error)
-    throw new Error(error.message || '사진 분석에 실패했어요.')
+    console.error('analyze-toeic-image Edge Function 오류:', error, data)
+    const fromBody =
+      data && typeof data === 'object' && data.error != null ? String(data.error) : ''
+    const hint = fromBody || error.message || '사진 분석 호출에 실패했어요.'
+    if (hint.includes('non-2xx') && !fromBody) {
+      throw new Error(
+        '사진 분석 서버 응답 오류예요. Supabase에서 analyze-toeic-image 함수 배포와 OPENAI_API_KEY 시크릿을 확인해 주세요.'
+      )
+    }
+    throw new Error(hint)
   }
 
   if (!data?.content) {
