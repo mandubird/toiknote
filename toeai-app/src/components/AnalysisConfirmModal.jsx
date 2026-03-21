@@ -66,7 +66,8 @@ const AnalysisConfirmModal = ({ open, onClose, initialData, imageUrl, onSave, sa
       setStep(1)
       setPart(initialData.part || '')
       setQuestion(initialData.question || '')
-      setAnswer(initialData.answer || '')
+      const rawAnswer = initialData.answer || ''
+      setAnswer(rawAnswer === '-' ? '' : rawAnswer)
       setExplanation(initialData.explanation || '')
       setTags(Array.isArray(initialData.tags) ? initialData.tags.join(', ') : '')
       setLcOrRc(initialData.lcOrRc === 'LC' ? 'LC' : 'RC')

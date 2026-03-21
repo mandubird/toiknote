@@ -44,8 +44,11 @@ const SYSTEM_PROMPT = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니�
 
 문제 번호가 전혀 보이지 않을 때에만 텍스트 내용으로 파트를 추정해도 됩니다.
 
-모든 태그와 세부 분류 필드는 반드시 한국어(한글)로만 작성하세요.
-영어 단어나 로마자 표기는 사용하지 말고, "관계대명사", "현재완료", "부정사"처럼 한국어 표현으로 통일하세요.
+**중요: question, options 필드는 반드시 이미지 원문 그대로 유지하세요. 절대 번역하지 마세요.**
+예) 이미지가 영어면 question과 options도 영어 그대로 작성.
+
+tags, explanation, grammarCategory, grammarSubType, passageType, questionType 등 분류/해설 필드만 한국어로 작성하세요.
+영어 단어나 로마자 표기는 분류 필드에서만 사용하지 말고, "관계대명사", "현재완료", "부정사"처럼 한국어 표현으로 통일하세요.
 
 이미지 안에 여러 문제가 있으면, 각 문제를 questions 배열의 원소로 모두 반환하세요.
 questions 배열 안의 **모든** 원소에 대해 question, answer, explanation, tags, difficulty를 빠짐없이 채워야 합니다.
@@ -62,7 +65,7 @@ questions 배열 안의 **모든** 원소에 대해 question, answer, explanatio
       "part": "Part 7",
       "lcOrRc": "LC" 또는 "RC",
       "question": "문제 텍스트...",
-      "answer": "",
+      "answer": "",   // 반드시 빈 문자열("")로 두세요. 정답은 사용자가 직접 선택합니다.
       "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
       "explanation": "정답 해설",
       "tags": ["관계대명사", "현재완료"],
