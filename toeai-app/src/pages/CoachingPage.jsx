@@ -71,27 +71,67 @@ export default function CoachingPage() {
   const [onboardingExampleMode, setOnboardingExampleMode] = useState(false)
 
   const ONBOARDING_INPUTS_KEY = 'todap_onboarding_inputs'
-  const ONBOARDING_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000
 
-  const loadOnboardingInputs = () => {
+  // localStorage 폴백 (DB 우선)
+  const loadOnboardingInputsFromStorage = () => {
     try {
       const raw = localStorage.getItem(ONBOARDING_INPUTS_KEY)
       if (!raw) return null
       const parsed = JSON.parse(raw)
       if (!parsed || typeof parsed !== 'object') return null
-      const savedAt = parsed.saved_at
-      if (typeof savedAt !== 'number') return null
-      if (Date.now() - savedAt > ONBOARDING_EXPIRY_MS) {
-        localStorage.removeItem(ONBOARDING_INPUTS_KEY)
-        return null
-      }
-
-      const weakPartOk = ['LC', 'RC', 'Part5', 'Part7'].includes(parsed.weak_part)
-      if (!weakPartOk) return null
-
+      if (!['LC', 'RC', 'Part5', 'Part7'].includes(parsed.weak_part)) return null
       return parsed
     } catch {
       return null
+    }
+  }
+
+  // DB에서 온보딩 데이터 로드
+  const loadOnboardingInputsFromDB = async (userId) => {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('current_score, target_score, exam_date, onboarding_weak_part')
+        .eq('id', userId)
+        .maybeSingle()
+      if (!data) return null
+      const { current_score, target_score, exam_date, onboarding_weak_part } = data
+      if (!current_score || !target_score || !onboarding_weak_part) return null
+      // days_left: exam_date 기반으로 실시간 계산
+      let days_left = 30
+      if (exam_date) {
+        const diff = Math.ceil((new Date(exam_date) - new Date()) / (1000 * 60 * 60 * 24))
+        days_left = diff > 0 ? diff : 7
+      }
+      return {
+        current_score,
+        target_score,
+        days_left,
+        weak_part: onboarding_weak_part,
+        saved_at: Date.now(),
+      }
+    } catch {
+      return null
+    }
+  }
+
+  // 온보딩 데이터 DB 저장
+  const saveOnboardingInputsToDB = async (userId, inputs) => {
+    try {
+      // days_left → exam_date 변환
+      const examDate = new Date()
+      examDate.setDate(examDate.getDate() + inputs.days_left)
+      const examDateStr = examDate.toISOString().split('T')[0]
+
+      await supabase.from('users').upsert({
+        id: userId,
+        current_score: inputs.current_score,
+        target_score: inputs.target_score,
+        exam_date: examDateStr,
+        onboarding_weak_part: inputs.weak_part,
+      }, { onConflict: 'id' })
+    } catch (e) {
+      console.warn('[onboarding] DB 저장 실패 (비필수):', e)
     }
   }
 
@@ -122,7 +162,10 @@ export default function CoachingPage() {
         ])
 
         const wc = wcList?.length ?? 0
-        const localInputs = wc >= 3 ? null : loadOnboardingInputs()
+        // DB 우선 → localStorage 폴백
+        const localInputs = wc >= 3
+          ? null
+          : (await loadOnboardingInputsFromDB(user.id)) || loadOnboardingInputsFromStorage()
 
         setSub(s)
         setWrongCount(wc)
@@ -243,6 +286,8 @@ export default function CoachingPage() {
               setOnboardingInputs(inputs)
               setOnboardingExampleMode(false)
               setOnboardingView('temporary')
+              // DB에 저장 (다른 기기 로그인 시에도 유지)
+              if (user?.id) saveOnboardingInputsToDB(user.id, inputs)
             }}
             onExample={(exampleInputs) => {
               setOnboardingInputs(exampleInputs)
