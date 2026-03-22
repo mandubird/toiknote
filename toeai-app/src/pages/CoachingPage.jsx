@@ -631,6 +631,30 @@ export default function CoachingPage() {
         </div>
       </div>
 
+      {/* 점수 교정 넛지 배너
+          드롭다운 선택값(50 배수)은 대략 입력된 값으로 판단 → 설정에서 정밀 수정 유도 */}
+      {profileComplete &&
+        !showProfileForm &&
+        userProfile.current_score % 50 === 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+            <span className="text-amber-500 text-base shrink-0 mt-0.5">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-900">점수를 정확히 입력하면 코칭이 더 정밀해져요</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                현재 입력된 {userProfile.current_score}점은 대략적인 값이에요.
+                실제 성적표 기준으로 수정하면 약점 분석이 훨씬 정확해져요.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="mt-2 text-xs font-bold text-amber-800 underline"
+              >
+                설정에서 정확한 점수 입력하기 →
+              </button>
+            </div>
+          </div>
+        )}
+
       {/* 인라인 입력 폼 */}
       {showProfileForm && (
         <ProfileForm
