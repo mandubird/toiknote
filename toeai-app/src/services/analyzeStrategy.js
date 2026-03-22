@@ -9,16 +9,27 @@ export async function analyzeStrategy(userId) {
     body: { userId },
   })
 
-  // 비-2xx여도 본문에 { error: "..." } 가 올 수 있음
+  // 비-2xx: FunctionsHttpError의 경우 응답 본문에서 실제 메시지 추출
+  if (error) {
+    let hint = '전략 분석 호출에 실패했어요.'
+    try {
+      // Supabase JS v2: error.context 는 Response 객체
+      if (error.context && typeof error.context.json === 'function') {
+        const body = await error.context.json()
+        if (body?.error) hint = String(body.error)
+      } else if (data?.error) {
+        hint = String(data.error)
+      } else if (error.message && error.message !== 'Edge Function returned a non-2xx status code') {
+        hint = error.message
+      }
+    } catch {
+      // JSON 파싱 실패 시 fallback
+    }
+    throw new Error(hint)
+  }
+
   if (data?.error) {
     throw new Error(typeof data.error === 'string' ? data.error : '전략 분석에 실패했어요.')
-  }
-  if (error) {
-    const hint =
-      (data && typeof data === 'object' && data.error && String(data.error)) ||
-      error.message ||
-      '전략 분석 호출에 실패했어요.'
-    throw new Error(hint)
   }
   if (!data) {
     throw new Error('전략 분석 결과를 받지 못했어요.')
