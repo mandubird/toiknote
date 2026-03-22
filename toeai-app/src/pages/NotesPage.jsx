@@ -106,6 +106,28 @@ const NotesPage = () => {
         <p className="text-sm text-surface-500 mt-1">오답을 모으고, 필터로 정리하고, 복습하세요.</p>
       </div>
 
+      {/* ── 정밀 코칭 진행 배너 (오답 0~2개일 때) ── */}
+      {!loading && questions.length < 3 && (
+        <div className="mb-4 rounded-2xl border border-primary-200 bg-primary-50 p-3">
+          <p className="text-sm font-bold text-primary-800">
+            정밀 코칭까지 {3 - questions.length}문제 남았어요
+          </p>
+          <div className="flex items-center gap-2 mt-2 mb-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className={`h-2 flex-1 rounded-full ${
+                  i < questions.length ? 'bg-primary-500' : 'bg-primary-200'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-primary-600">
+            현재 {questions.length}/3 등록됨 — 오답 3개를 등록하면 메인 코칭이 개인화돼요
+          </p>
+        </div>
+      )}
+
       {/* ── 오늘의 요약 ── */}
       {!loading && (
         <div className="mb-5">
