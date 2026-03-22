@@ -197,6 +197,10 @@ serve(async (req) => {
 
     // 중복 제거 후 최대 4개
     const uniqueTips = [...new Set(matchedTipTexts)].slice(0, 4)
+
+    // 미구현 필드 기본값
+    const weakGrammarTop3: string[] = weakTags.slice(0, 3)
+    const avgPart7TimeSeconds: number | null = null
     const weakTypesText = weakTypes.slice(0, 3).map(wt => wt.type).join(', ') || weakTags.join(', ')
 
     const timeoutText = timeShortageCount > 0
