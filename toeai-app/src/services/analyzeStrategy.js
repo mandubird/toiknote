@@ -5,8 +5,13 @@ import { supabase } from '../lib/supabase'
  * @param {string} userId
  */
 export async function analyzeStrategy(userId) {
+  // 세션 토큰 명시적으로 포함
+  const { data: { session } } = await supabase.auth.getSession()
+  const accessToken = session?.access_token
+
   const { data, error } = await supabase.functions.invoke('analyze-strategy', {
     body: { userId },
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
   })
 
   // 비-2xx: FunctionsHttpError의 경우 응답 본문에서 실제 메시지 추출
