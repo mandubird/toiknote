@@ -108,7 +108,7 @@ serve(async (req) => {
     const [tagStatsRes, userRes, segmentRes] = await Promise.all([
       supabase.from('tag_stats').select('*').eq('user_id', userId).maybeSingle(),
       supabase.from('users').select('*').eq('id', userId).maybeSingle(),
-      supabase.rpc('get_segment_stats', { p_user_id: userId }).maybeSingle(),
+      supabase.rpc('get_segment_stats', { p_user_id: userId }),
     ])
 
     const tagStats = tagStatsRes.data || {}
@@ -137,77 +137,95 @@ serve(async (req) => {
     const targetScore = Number(userData.target_score) || 900
     const lcWrong = Number(tagStats.lc_wrong) || 0
     const rcWrong = Number(tagStats.rc_wrong) || 0
-
     const rcWrongRatio = totalWrong > 0 ? Math.round((rcWrong / totalWrong) * 100) : 0
     const { rcTimeAllocation, rcStrategyText } = computeRcStrategy(partCounts, rcWrong)
 
-    const weakGrammarTop3 = (segmentStats.part5Grammar || [])
-      .slice(0, 3)
-      .map((g: any) => g.name)
-    const avgPart7TimeSeconds = segmentStats.avgPart7TimeSeconds ?? null
+    // get_segment_stats에서 세그먼트 데이터 추출
+    const weakTypes: Array<{ type: string; count: number }> = segmentStats.weak_types || []
+    const timeShortageCount = Number(segmentStats.time_shortage_count) || 0
+    const rereadHeavyCount = Number(segmentStats.reread_heavy_count) || 0
+    const totalCount = Number(segmentStats.total_count) || totalWrong
 
-    const part5GrammarText =
-      segmentStats.part5Grammar?.length > 0
-        ? segmentStats.part5Grammar
-            .slice(0, 5)
-            .map((g: any) =>
-              g.sub ? `${g.name} (세부: ${Object.keys(g.sub).join(', ')})` : g.name,
-            )
-            .join('; ')
-        : ''
-    const part7Text =
-      []
-        .concat(
-          (segmentStats.part7Passage || [])
-            .slice(0, 3)
-            .map((p: any) => `지문:${p.name}`),
-          (segmentStats.part7QuestionType || [])
-            .slice(0, 3)
-            .map((p: any) => `질문:${p.name}`),
-        )
-        .join(', ') || '(없음)'
-    const part2Text =
-      segmentStats.part2Pattern?.length > 0
-        ? segmentStats.part2Pattern
-            .slice(0, 3)
-            .map((p: any) => `${p.name}`)
-            .join(', ')
-        : '(없음)'
-    const timeoutText =
-      segmentStats.timeoutCount > 0
-        ? `시간 부족으로 찍은 비율: ${
-            segmentStats.totalCount
-              ? Math.round((segmentStats.timeoutCount / segmentStats.totalCount) * 100)
-              : 0
-          }%`
-        : ''
+    // tip_rules 매칭: 취약 유형 + 패턴 기반 팁 선택
+    const matchedTipTexts: string[] = []
+
+    // 1) 취약 유형 기반 팁 (상위 2개 유형)
+    for (const wt of weakTypes.slice(0, 2)) {
+      const part = weakParts[0] || null
+      const { data: typeTips } = await supabase
+        .from('tip_rules')
+        .select('tip_text')
+        .eq('type', wt.type)
+        .or(part ? `part.eq.${part},part.is.null` : 'part.is.null')
+        .order('priority', { ascending: false })
+        .limit(2)
+      if (typeTips) matchedTipTexts.push(...typeTips.map((t: any) => t.tip_text))
+    }
+
+    // 2) 파트 기반 팁 (유형 매칭 없을 때)
+    if (matchedTipTexts.length === 0 && weakParts.length > 0) {
+      const { data: partTips } = await supabase
+        .from('tip_rules')
+        .select('tip_text')
+        .eq('part', weakParts[0])
+        .is('type', null)
+        .is('pattern', null)
+        .order('priority', { ascending: false })
+        .limit(2)
+      if (partTips) matchedTipTexts.push(...partTips.map((t: any) => t.tip_text))
+    }
+
+    // 3) 패턴 팁 (시간부족/재독)
+    if (timeShortageCount >= 2) {
+      const { data: timeTips } = await supabase
+        .from('tip_rules')
+        .select('tip_text')
+        .eq('pattern', 'time_shortage')
+        .order('priority', { ascending: false })
+        .limit(1)
+      if (timeTips) matchedTipTexts.push(...timeTips.map((t: any) => t.tip_text))
+    }
+    if (rereadHeavyCount >= 2) {
+      const { data: rereadTips } = await supabase
+        .from('tip_rules')
+        .select('tip_text')
+        .eq('pattern', 'reread_heavy')
+        .order('priority', { ascending: false })
+        .limit(1)
+      if (rereadTips) matchedTipTexts.push(...rereadTips.map((t: any) => t.tip_text))
+    }
+
+    // 중복 제거 후 최대 4개
+    const uniqueTips = [...new Set(matchedTipTexts)].slice(0, 4)
+    const weakTypesText = weakTypes.slice(0, 3).map(wt => wt.type).join(', ') || weakTags.join(', ')
+
+    const timeoutText = timeShortageCount > 0
+      ? `시간 부족 오답: ${timeShortageCount}개 (${Math.round(timeShortageCount / totalCount * 100)}%)`
+      : ''
 
     const prompt = `너는 토익 ${targetScore}점 이상 전문 코치다.
 사용자 데이터:
 - 현재 점수: ${currentScore}점
 - 목표 점수: ${targetScore}점
 - 취약 파트: Part ${weakParts.join(', Part ')}
-- 취약 태그: ${weakTags.join(', ')}
+- 취약 유형/태그: ${weakTypesText}
 - LC 오답: ${lcWrong}개, RC 오답: ${rcWrong}개, 총 오답: ${totalWrong}개 (RC 오답 비율: ${rcWrongRatio}%)
-- Part 5 취약 문법 상위: ${weakGrammarTop3.length ? weakGrammarTop3.join(', ') : '(데이터 없음)'}
-- Part 5 문법 약점(유형): ${part5GrammarText || '(데이터 없음)'}
-- Part 7 지문/질문 유형: ${part7Text}
-${avgPart7TimeSeconds != null ? `- Part 7 평균 풀이 시간: ${avgPart7TimeSeconds}초` : ''}
-- Part 2 질문 패턴: ${part2Text}
 ${timeoutText ? `- ${timeoutText}` : ''}
+${rereadHeavyCount >= 2 ? `- 지문 재독 많음: ${rereadHeavyCount}회` : ''}
 
-${currentScore}점에서 ${targetScore}점으로 올리는 구체적인 전략을 제시하라.
-priorityFocus에는 Part 5 문법이 약하면 "Part 5 문법 - 특히 [세부 유형]" 형태로 세부 문법 약점을 명시하라.
-expectedImprovement는 현재 ${currentScore}점과 목표 ${targetScore}점(차이 ${
-      targetScore - currentScore
-    }점)을 바탕으로 현실적인 개선 폭을 계산하라. 예시 값(+80점 등)을 그대로 쓰지 말고 실제 데이터 기반으로 산출하라.
+아래 팁 후보들은 사용자 약점 데이터 기반으로 DB에서 선택된 실전 팁이다:
+${uniqueTips.length > 0 ? uniqueTips.map((t, i) => `${i + 1}. ${t}`).join('\n') : '(일반 전략 사용)'}
+
+위 데이터와 팁 후보를 활용해 ${currentScore}점에서 ${targetScore}점으로 올리는 전략을 제시하라.
+specificTips는 반드시 위 팁 후보 문장을 그대로 쓰거나 더 자연스럽게 다듬어서 사용하라. 일반적인 조언은 쓰지 마라.
+expectedImprovement는 현재 ${currentScore}점 기준으로 현실적인 수치를 산출하라.
 반드시 아래 JSON만 출력하라 (다른 말 없이):
 {
-  "priorityFocus": "우선 공략 영역 한 문장 (문법 약점이 있으면 세부 유형 포함)",
-  "grammarWeaknessSummary": "Part 5 세부 문법 약점 한 줄 요약. 예: 시제 - 특히 현재완료",
+  "priorityFocus": "우선 공략 영역 한 문장",
+  "grammarWeaknessSummary": "약점 한 줄 요약",
   "dailyPlan": "하루 학습 루틴 (2~3문장)",
   "weeklyGoal": "주간 목표 한 문장",
-  "expectedImprovement": "N주 후 +N점 → ${currentScore}+N점 형태로 현재 점수 기반으로 작성. 예시 값을 복사하지 말 것",
+  "expectedImprovement": "N주 후 +N점 → ${currentScore}+N점 형태",
   "specificTips": ["팁1", "팁2", "팁3"]
 }`
 
