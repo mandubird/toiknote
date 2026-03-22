@@ -112,7 +112,7 @@ export default function CoachingPage() {
     setLoading(true)
 
     // 코칭 화면 진입 로그 (coaching_logs) — KPI용
-    supabase.from('coaching_logs').insert({ user_id: user.id }).catch(() => {})
+    supabase.from('coaching_logs').insert({ user_id: user.id }).then(() => {}).catch(() => {})
 
     ;(async () => {
       try {
