@@ -5,6 +5,7 @@ import { recordReferral } from '../services/referralService'
 import CameraButton from './CameraButton'
 import UploadProgressOverlay from './UploadProgressOverlay'
 import AnalysisConfirmModal from './AnalysisConfirmModal'
+import OcrSelectionScreen from './OcrSelectionScreen'
 import { analyzeToeicImage } from '../services/analyzeImage'
 import { saveWrongNoteWithStats } from '../services/saveWrongNoteWithStats'
 import { getSubscription, getFreeLimit, getTrialStatus } from '../services/subscription'
@@ -27,6 +28,8 @@ const Layout = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [confirmImageUrl, setConfirmImageUrl] = useState(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showSelectionScreen, setShowSelectionScreen] = useState(false)
+  const [ocrAllQuestions, setOcrAllQuestions] = useState([])
   const [showPaywall, setShowPaywall] = useState(false)
   const [saving, setSaving] = useState(false)
   const refreshList = useRefreshList()
@@ -89,11 +92,15 @@ const Layout = () => {
         if (!questions || !questions.length) {
           throw new Error('이미지에서 토익 문제를 찾지 못했어요.')
         }
-        setAnalysisQueue(questions)
-        setCurrentQuestionIndex(0)
-        setAnalysisResult(questions[0])
+        // 전체 입력 큐를 바로 열지 않고, 오답 선택 화면부터 보여줌
+        setOcrAllQuestions(questions)
         setConfirmImageUrl(url)
-        setShowConfirmModal(true)
+        setShowSelectionScreen(true)
+
+        setAnalysisQueue([])
+        setCurrentQuestionIndex(0)
+        setAnalysisResult(null)
+        setShowConfirmModal(false)
       } catch (err) {
         setAnalysisError(err?.message || '사진 분석에 실패했어요.')
         alert(err?.message || '사진 분석에 실패했어요. 다시 시도해 주세요.')
@@ -122,6 +129,7 @@ const Layout = () => {
 
         const result = await saveWrongNoteWithStats(user.id, data)
         if (result.success) {
+          const savedCount = analysisQueue.length
           const nextIndex = currentQuestionIndex + 1
           const hasNext = nextIndex < analysisQueue.length
 
@@ -131,9 +139,10 @@ const Layout = () => {
             setAnalysisError(null)
             refreshList()
             refreshTrialInfo()
-            alert('오답이 저장되었어요. 다음 문제도 이어서 저장할게요.')
+            alert(`저장되었어요. 다음 문제 (${nextIndex + 1}/${savedCount}) 입력할게요.`)
           } else {
             setShowConfirmModal(false)
+            setShowSelectionScreen(false)
             setAnalysisResult(null)
             setConfirmImageUrl(null)
             setAnalysisError(null)
@@ -141,7 +150,7 @@ const Layout = () => {
             setCurrentQuestionIndex(0)
             refreshList()
             refreshTrialInfo()
-            alert('오답이 저장되었어요.')
+            alert(`오답 ${savedCount}개가 기록되었어요.`)
           }
         } else {
           alert(
@@ -273,10 +282,34 @@ const Layout = () => {
       {/* AI 분석 중 오버레이 */}
       {analyzing && (
         <UploadProgressOverlay
-          message="이미지를 분석했습니다. 문제 유형만 선택하면 저장됩니다."
+          message="이미지를 분석했습니다. 틀린 문제를 선택해 주세요."
           hideProgress
         />
       )}
+
+      {/* OCR 이후 오답 선택 오버레이 */}
+      <OcrSelectionScreen
+        open={showSelectionScreen}
+        questions={ocrAllQuestions}
+        wrongCount={analysisQueue.length}
+        onConfirm={(selectedQuestions) => {
+          if (!selectedQuestions || !selectedQuestions.length) return
+          setAnalysisQueue(selectedQuestions)
+          setCurrentQuestionIndex(0)
+          setAnalysisResult(selectedQuestions[0])
+          setAnalysisError(null)
+          setShowSelectionScreen(false)
+          setShowConfirmModal(true)
+        }}
+        onClose={() => {
+          setShowSelectionScreen(false)
+          setOcrAllQuestions([])
+          setConfirmImageUrl(null)
+          setAnalysisQueue([])
+          setAnalysisResult(null)
+          setCurrentQuestionIndex(0)
+        }}
+      />
 
       {/* 2단계 확인 모달 */}
       <AnalysisConfirmModal
@@ -287,6 +320,8 @@ const Layout = () => {
           setConfirmImageUrl(null)
           setAnalysisQueue([])
           setCurrentQuestionIndex(0)
+          setOcrAllQuestions([])
+          setShowSelectionScreen(false)
         }}
         initialData={analysisResult}
         multiTotal={analysisQueue.length || 1}
