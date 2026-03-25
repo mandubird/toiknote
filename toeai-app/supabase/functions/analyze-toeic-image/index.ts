@@ -47,6 +47,11 @@ const SYSTEM_PROMPT = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니�
 **중요: question, options 필드는 반드시 이미지 원문 그대로 유지하세요. 절대 번역하지 마세요.**
 예) 이미지가 영어면 question과 options도 영어 그대로 작성.
 
+**options 규칙: 이미지에 실제로 보이는 보기만 넣으세요. 절대 보기를 만들어내지 마세요.**
+- 보기가 2개(a, b)만 보이면 options에 A와 B만 넣고 C, D는 넣지 마세요.
+- 보기가 4개(a, b, c, d) 보이면 A~D 모두 넣으세요.
+- 이미지에 없는 보기를 추가하거나 다른 문제의 보기를 섞지 마세요.
+
 tags, explanation, grammarCategory, grammarSubType, passageType, questionType 등 분류/해설 필드만 한국어로 작성하세요.
 영어 단어나 로마자 표기는 분류 필드에서만 사용하지 말고, "관계대명사", "현재완료", "부정사"처럼 한국어 표현으로 통일하세요.
 

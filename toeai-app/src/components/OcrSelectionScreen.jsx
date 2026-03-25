@@ -87,44 +87,37 @@ const OcrSelectionScreen = ({ open, questions, onConfirm, onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] bg-white overflow-y-auto">
       <div className="max-w-lg mx-auto px-4 py-4 pb-28">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-bold text-gray-900">문제를 분석했습니다</h2>
-            <p className="text-xs text-gray-500 mt-1">
-              틀린 문제만 선택해주세요. 맞은 문제는 선택하지 않아도 됩니다.
+            <p className="text-xs text-gray-500 mt-0.5">
+              틀린 문제만 선택해주세요.
             </p>
-            {count > 0 && (
-              <div className="mt-3 text-xs text-gray-600 bg-surface-50 border border-surface-200 rounded-lg px-3 py-2">
-                총 {count}문제 인식 · 선택한 오답 {selectedCount}개
-              </div>
-            )}
           </div>
 
-          <div className="flex items-start gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {count > 0 && (
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="text-[11px] px-3 py-1 rounded-full border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
-                    onClick={setAll}
-                  >
-                    전체 선택
-                  </button>
-                  <button
-                    type="button"
-                    className="text-[11px] px-3 py-1 rounded-full border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
-                    onClick={clearAll}
-                  >
-                    전체 해제
-                  </button>
-                </div>
-              </div>
+              <>
+                <button
+                  type="button"
+                  className="whitespace-nowrap text-[11px] px-2.5 py-1 rounded-full border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
+                  onClick={setAll}
+                >
+                  전체선택
+                </button>
+                <button
+                  type="button"
+                  className="whitespace-nowrap text-[11px] px-2.5 py-1 rounded-full border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
+                  onClick={clearAll}
+                >
+                  전체해제
+                </button>
+              </>
             )}
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
+              className="p-1.5 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
               aria-label="닫기"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -134,7 +127,13 @@ const OcrSelectionScreen = ({ open, questions, onConfirm, onClose }) => {
           </div>
         </div>
 
-        <div className="mt-4 space-y-3">
+        {count > 0 && (
+          <div className="mt-2 text-xs text-gray-600 bg-surface-50 border border-surface-200 rounded-lg px-3 py-2">
+            총 {count}문제 인식 · 선택한 오답 {selectedCount}개
+          </div>
+        )}
+
+        <div className="mt-3 space-y-3">
           {(questions || []).map((q, idx) => {
             const checked = checkedIndices.has(idx)
             const partStr = q?.part || ''
