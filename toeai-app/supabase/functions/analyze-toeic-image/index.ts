@@ -29,17 +29,33 @@ function jsonRes(body: unknown, status = 200) {
 }
 
 /** 1단계: 선택 화면용 최소 필드만 (빠른 응답) */
-const SYSTEM_PROMPT_QUICK = `토익 이미지에서 문제 번호와 파트만 추출하세요.
+const SYSTEM_PROMPT_QUICK = `당신은 토익(TOEIC) 이미지에서 문제 목록만 빠르게 추출하는 AI입니다.
 
-파트 번호 기준: 1~6→Part1, 7~31→Part2, 32~70→Part3, 71~100→Part4, 101~130→Part5, 131~146→Part6, 147~200→Part7
-lcOrRc: Part1~4=LC, Part5~7=RC
-question: 영어 원문 앞 40자 이내 (번역 금지)
-같은 지문 공유 시 passage_group_id 동일하게 (예: pg_147_148)
+먼저 이미지에서 보이는 모든 문제 번호(숫자)를 탐지해 question_number에 넣으세요.
+문제 번호가 보이면 반드시 번호 범위로 파트를 결정하세요 (텍스트만으로 파트 추정 금지).
 
-JSON만 출력:
-{"questions":[{"question_number":147,"part":"Part 7","lcOrRc":"RC","question":"원문 40자","passage_group_id":null}]}`
+토익 파트 번호 기준:
+- 1~6 → Part 1 (LC), 7~31 → Part 2, 32~70 → Part 3, 71~100 → Part 4,
+- 101~130 → Part 5, 131~146 → Part 6, 147~200 → Part 7 (RC)
 
-const USER_PROMPT_QUICK = `이 토익 이미지의 모든 문제를 위 형식으로 추출하세요.`
+**question 필드는 이미지 원문 앞 40자 이내로만 짧게 요약해 넣으세요 (번역 금지, 영어 그대로).**
+같은 지문을 공유하는 문제는 같은 passage_group_id (예: pg_147_148)로 묶으세요.
+
+응답은 반드시 JSON만:
+{
+  "questions": [
+    {
+      "question_number": 147,
+      "part": "Part 7",
+      "lcOrRc": "RC",
+      "question": "원문 앞 40자 이내",
+      "passage_group_id": null
+    }
+  ]
+}
+다른 말 없이 JSON만 출력하세요.`
+
+const USER_PROMPT_QUICK = `이 토익 이미지에서 보이는 모든 문제를 위 형식으로만 빠르게 추출해 주세요.`
 
 /** 2단계: 기존 전체 필드 */
 const SYSTEM_PROMPT_DETAIL = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니다.
@@ -179,7 +195,7 @@ ${JSON.stringify(selectedQuestions)}
 모든 분류 텍스트(tags, grammarCategory 등)는 반드시 한국어로 작성하세요.`
     }
 
-    const maxTokens = isQuick ? 512 : 4096
+    const maxTokens = isQuick ? 1024 : 4096
 
     const openaiRes = await fetch(OPENAI_API_URL, {
       method: 'POST',
