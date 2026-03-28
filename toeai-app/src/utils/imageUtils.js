@@ -1,6 +1,6 @@
-const MAX_WIDTH = 1024
-const MAX_SIZE_BYTES = 0.5 * 1024 * 1024 // 0.5MB
-const INITIAL_QUALITY = 0.85
+const MAX_WIDTH = 800
+const MAX_SIZE_BYTES = 0.3 * 1024 * 1024 // 0.3MB
+const INITIAL_QUALITY = 0.82
 const MIN_QUALITY = 0.5
 
 /**

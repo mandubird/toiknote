@@ -91,7 +91,7 @@ const OcrSelectionScreen = ({ open, questions, onConfirm, onClose }) => {
           <div>
             <h2 className="text-lg font-bold text-gray-900">문제를 분석했습니다</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              틀린 문제만 선택해주세요.
+              틀린 문제만 체크하고 저장하세요. (기본값: 미선택)
             </p>
           </div>
 

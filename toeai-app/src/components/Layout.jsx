@@ -86,25 +86,21 @@ const Layout = () => {
     setHideReviewStep1Session(true)
   }, [user?.id])
 
-  const handleUploadComplete = useCallback(
-    async (payload) => {
+  // base64 준비 즉시 호출 — Supabase 업로드 완료 전에 분석 시작
+  const handleBase64Ready = useCallback(
+    async (imageBase64) => {
       if (!user) return
-      const url = typeof payload === 'string' ? payload : payload?.url
-      const imageBase64 = typeof payload === 'object' && payload?.imageBase64 ? payload.imageBase64 : null
-      if (!url) return
+      setConfirmImageBase64(imageBase64)
+      setConfirmImageUrl(null)
       setAnalysisError(null)
       setAnalyzing(true)
       try {
-        const { questions } = await analyzeToeicImage({ imageUrl: url, imageBase64 }, 'quick')
+        const { questions } = await analyzeToeicImage({ imageBase64 }, 'quick')
         if (!questions || !questions.length) {
           throw new Error('이미지에서 토익 문제를 찾지 못했어요.')
         }
-        // 전체 입력 큐를 바로 열지 않고, 오답 선택 화면부터 보여줌
         setOcrAllQuestions(questions)
-        setConfirmImageUrl(url)
-        setConfirmImageBase64(imageBase64)
         setShowSelectionScreen(true)
-
         setAnalysisQueue([])
         setCurrentQuestionIndex(0)
         setAnalysisResult(null)
@@ -120,11 +116,15 @@ const Layout = () => {
     [user]
   )
 
+  // 업로드 완료 후 URL 저장 (상세 분석 fallback용)
+  const handleUploadComplete = useCallback(({ url }) => {
+    if (url) setConfirmImageUrl(url)
+  }, [])
+
   const handleOcrSelectionConfirm = useCallback(
     async (selectedQuestions) => {
       if (!user || !selectedQuestions?.length) return
-      const imageUrl = confirmImageUrl
-      if (!imageUrl) {
+      if (!confirmImageUrl && !confirmImageBase64) {
         alert('이미지 정보가 없어요. 다시 촬영해 주세요.')
         return
       }
@@ -139,7 +139,7 @@ const Layout = () => {
       detailAbortRef.current = ac
       try {
         const { questions } = await analyzeToeicImage(
-          { imageUrl, imageBase64: confirmImageBase64 },
+          { imageUrl: confirmImageUrl || undefined, imageBase64: confirmImageBase64 },
           'detail',
           selectedQuestions,
           { signal: ac.signal }
@@ -330,7 +330,8 @@ const Layout = () => {
       {showCameraButton && (
         <CameraButton
           user={user}
-          onUploadComplete={handleUploadComplete}
+          onBase64Ready={handleBase64Ready}
+          onUrlReady={handleUploadComplete}
           onLoginRequired={handleLoginRequired}
         />
       )}
@@ -338,7 +339,7 @@ const Layout = () => {
       {/* AI 분석 중 오버레이 */}
       {analyzing && (
         <UploadProgressOverlay
-          message="이미지를 분석했습니다. 틀린 문제를 선택해 주세요."
+          message="AI가 문제를 분석하고 있어요..."
           hideProgress
         />
       )}
