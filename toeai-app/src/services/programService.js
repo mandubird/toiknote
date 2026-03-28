@@ -346,8 +346,11 @@ const DAYS_TOTAL = 100
 /**
  * v4.04 + v4.1: 대시보드 요약 (코칭 화면·60일 진행바·약점 TOP3·점수 이력)
  * @param {string} userId
+ * @param {{ profile?: { currentScore: number, targetScore: number, lcScore?: number|null, rcScore?: number|null, usageCount?: number } }} [options]
+ *        options.profile이 있으면 getUserProfile() 호출 생략
  */
-export async function getDashboardSummary(userId) {
+export async function getDashboardSummary(userId, options = {}) {
+  const injectedProfile = options?.profile
   const empty = {
     current_week: 0,
     predicted_score: null,
@@ -364,15 +367,19 @@ export async function getDashboardSummary(userId) {
   }
   if (!userId) return empty
 
-  const [plan, reports, profile, { data: scorePred }, tagStats, top10Weak, { data: clearedRows }] = await Promise.all([
-    getProgramPlan(userId),
-    getWeeklyReports(userId),
-    getUserProfile(userId),
-    supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
-    fetchTagStats(userId),
-    getTop10WeakTags(userId).catch(() => []),
-    supabase.from('wrong_answers').select('part_number').eq('user_id', userId).not('cleared_at', 'is', null),
-  ])
+  const profilePromise =
+    injectedProfile != null ? Promise.resolve(injectedProfile) : getUserProfile(userId)
+
+  const [plan, reports, profile, { data: scorePred }, tagStats, top10Weak, { data: clearedRows }] =
+    await Promise.all([
+      getProgramPlan(userId),
+      getWeeklyReports(userId),
+      profilePromise,
+      supabase.from('score_prediction').select('predicted_score').eq('user_id', userId).maybeSingle(),
+      fetchTagStats(userId),
+      getTop10WeakTags(userId).catch(() => []),
+      supabase.from('wrong_answers').select('part_number').eq('user_id', userId).not('cleared_at', 'is', null),
+    ])
 
   // 파트별 클리어 수 집계
   const clearedPerPart = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 }

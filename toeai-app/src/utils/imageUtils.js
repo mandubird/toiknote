@@ -60,3 +60,17 @@ export async function resizeAndCompressImage(file) {
     img.src = url
   })
 }
+
+/**
+ * Blob → data URL (data:image/jpeg;base64,...)
+ * @param {Blob} blob
+ * @returns {Promise<string>}
+ */
+export function readBlobAsDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error || new Error('파일 읽기 실패'))
+    reader.readAsDataURL(blob)
+  })
+}

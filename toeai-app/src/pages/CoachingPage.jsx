@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useListVersion } from '../contexts/RefreshListContext'
 import { getDashboardSummary } from '../services/programService'
 import { getSubscription } from '../services/subscription'
-import { fetchWrongAnswers } from '../services/fetchWrongAnswers'
+import { fetchWrongAnswerCount } from '../services/fetchWrongAnswers'
 import { getMasteryBoard } from '../services/masteryService'
 import { supabase } from '../lib/supabase'
 import {
@@ -37,6 +37,20 @@ function formatDday(examDate) {
   exam.setHours(0, 0, 0, 0)
   const diff = Math.ceil((exam - today) / (1000 * 60 * 60 * 24))
   return Number.isFinite(diff) ? diff : null
+}
+
+/** loadUserProfile 행 → getDashboardSummary에 넘길 getUserProfile 형태 */
+function coachingRowToDashboardProfile(row) {
+  if (!row) return null
+  const cur = Number(row.current_score)
+  const tgt = Number(row.target_score)
+  return {
+    currentScore: cur >= 200 && cur <= 990 ? cur : 0,
+    targetScore: tgt >= 200 && tgt <= 990 ? tgt : 900,
+    lcScore: null,
+    rcScore: null,
+    usageCount: 0,
+  }
 }
 
 function buildTodayActions({ top3, weeklyMission }) {
@@ -288,21 +302,23 @@ export default function CoachingPage() {
 
     ;(async () => {
       try {
-        const [wcList, s, profile] = await Promise.all([
-          fetchWrongAnswers(user.id).catch(() => []),
+        // 1차: 오답 개수(head) · 구독 · 프로필 — 병렬 (전체 wrong_answers SELECT 제거)
+        const [wc, s, profile] = await Promise.all([
+          fetchWrongAnswerCount(user.id).catch(() => 0),
           getSubscription(user.id).catch(() => ({ paid: false })),
           loadUserProfile(user.id),
         ])
         if (cancelled) return
 
-        const wc = wcList?.length ?? 0
         setSub(s)
         setWrongCount(wc)
         setUserProfile(profile)
 
+        // 2차: 오답 3개 이상일 때만 대시보드·마스터리 (프로필 주입으로 getUserProfile 중복 제거)
         if (wc >= 3) {
+          const dashProfile = coachingRowToDashboardProfile(profile)
           const [d, board] = await Promise.all([
-            getDashboardSummary(user.id).catch(() => null),
+            getDashboardSummary(user.id, dashProfile ? { profile: dashProfile } : {}).catch(() => null),
             getMasteryBoard(user.id).catch(() => []),
           ])
           if (cancelled) return
@@ -331,11 +347,13 @@ export default function CoachingPage() {
     return () => { cancelled = true }
   }, [user?.id, listVersion])
 
-  // 소셜 증거 (full coaching일 때만)
   useEffect(() => {
-    if (!user?.id || wrongCount < 3) { setMyProofReview(null); return }
+    if (!user?.id) {
+      setMyProofReview(null)
+      return
+    }
     fetchMyProofReview(user.id).then(setMyProofReview)
-  }, [user?.id, wrongCount])
+  }, [user?.id])
 
   useEffect(() => {
     if (!user || wrongCount < 3) return
@@ -356,6 +374,17 @@ export default function CoachingPage() {
     if (checklist?.length >= 3) return checklist.slice(0, 3).map((i) => i?.name).filter(Boolean)
     return buildTodayActions({ top3, weeklyMission })
   }, [checklist, top3, weeklyMission])
+
+  const daysSinceSignup = useMemo(() => {
+    const t = user?.created_at
+    if (!t) return 0
+    const ms = Date.now() - new Date(t).getTime()
+    return Math.floor(ms / (86400 * 1000))
+  }, [user?.created_at])
+
+  /** 스펙: 오답 ≥5 또는 가입 3일 이상, 후기 행 없을 때 */
+  const showReviewCollectionBanner =
+    !!user && myProofReview == null && (wrongCount >= 5 || daysSinceSignup >= 3)
 
   const profileComplete =
     userProfile?.current_score &&
@@ -444,6 +473,21 @@ export default function CoachingPage() {
             </button>
           )}
         </div>
+
+        {showReviewCollectionBanner && (
+          <div className="rounded-2xl border border-primary-200 bg-primary-50 p-4">
+            <p className="text-sm text-surface-800 mb-3">
+              사용 경험을 남겨주시면 더 정확한 전략 개선에 반영됩니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/review/write')}
+              className="w-full py-3 rounded-xl bg-primary-600 text-white text-sm font-bold"
+            >
+              후기 남기기
+            </button>
+          </div>
+        )}
 
         {/* 2단계 후기 유도 */}
         {myProofReview?.review_stage === 1 && (
@@ -569,6 +613,21 @@ export default function CoachingPage() {
         <h1 className="text-2xl font-bold text-surface-900">코칭 홈</h1>
         <p className="text-sm text-surface-500 mt-1">정보를 채울수록 코칭이 정밀해져요</p>
       </div>
+
+      {showReviewCollectionBanner && (
+        <div className="rounded-2xl border border-primary-200 bg-primary-50 p-4">
+          <p className="text-sm text-surface-800 mb-3">
+            사용 경험을 남겨주시면 더 정확한 전략 개선에 반영됩니다.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/review/write')}
+            className="w-full py-3 rounded-xl bg-primary-600 text-white text-sm font-bold"
+          >
+            후기 남기기
+          </button>
+        </div>
+      )}
 
       {/* 코칭 준비 현황 카드 */}
       <div className="bg-white rounded-2xl border border-surface-200 p-4">

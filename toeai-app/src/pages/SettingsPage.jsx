@@ -362,6 +362,19 @@ const SettingsPage = () => {
               </div>
             )}
 
+            {user && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">피드백</h3>
+                <button
+                  type="button"
+                  onClick={() => navigate('/review/write')}
+                  className="w-full text-left py-2 text-sm text-primary-600 font-medium hover:underline"
+                >
+                  사용 후기 남기기 →
+                </button>
+              </div>
+            )}
+
             {/* 앱 정보 (policy 탭에서 이동) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <h3 className="font-semibold text-gray-900 mb-3">앱 정보</h3>

@@ -2,11 +2,12 @@
  * analyze-toeic-image — OpenAI GPT-4o mini 이미지 분석 (서버사이드)
  *
  * POST /functions/v1/analyze-toeic-image
- * Body: { imageUrl: string }
- * Headers: Authorization: Bearer {supabase_user_access_token}
- *
- * 필요한 Supabase Secrets:
- *   OPENAI_API_KEY — OpenAI API 키
+ * Body: {
+ *   imageUrl?: string,
+ *   imageBase64?: string,  // data:image/jpeg;base64,... 또는 순수 base64
+ *   mode?: 'quick' | 'detail',  // 기본 'quick'
+ *   selectedQuestions?: Array<{ question_number?: number, part?: string, passage_group_id?: string | null }>
+ * }
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
@@ -27,7 +28,39 @@ function jsonRes(body: unknown, status = 200) {
   })
 }
 
-const SYSTEM_PROMPT = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니다.
+/** 1단계: 선택 화면용 최소 필드만 (빠른 응답) */
+const SYSTEM_PROMPT_QUICK = `당신은 토익(TOEIC) 이미지에서 문제 목록만 빠르게 추출하는 AI입니다.
+
+먼저 이미지에서 보이는 모든 문제 번호(숫자)를 탐지해 question_number에 넣으세요.
+문제 번호가 보이면 반드시 번호 범위로 파트를 결정하세요 (텍스트만으로 파트 추정 금지).
+
+토익 파트 번호 기준:
+- 1~6 → Part 1 (LC), 7~31 → Part 2, 32~70 → Part 3, 71~100 → Part 4,
+- 101~130 → Part 5, 131~146 → Part 6, 147~200 → Part 7 (RC)
+
+**question 필드는 이미지 원문 앞 60자 이내로만 짧게 요약해 넣으세요 (번역 금지, 영어 그대로).**
+**options는 이미지에 실제로 보이는 보기만 A/B/C/D 키로 넣으세요. 없는 키는 생략.**
+같은 지문을 공유하는 문제는 같은 passage_group_id (예: pg_147_148)로 묶으세요.
+
+응답은 반드시 JSON만:
+{
+  "questions": [
+    {
+      "question_number": 147,
+      "part": "Part 7",
+      "lcOrRc": "LC" | "RC",
+      "question": "원문 앞 60자 이내",
+      "options": { "A": "...", "B": "..." },
+      "passage_group_id": "pg_147_148" | null
+    }
+  ]
+}
+다른 말 없이 JSON만 출력하세요.`
+
+const USER_PROMPT_QUICK = `이 토익 이미지에서 보이는 모든 문제를 위 형식으로만 빠르게 추출해 주세요.`
+
+/** 2단계: 기존 전체 필드 */
+const SYSTEM_PROMPT_DETAIL = `당신은 토익(TOEIC) 오답 노트를 위한 AI입니다.
 사용자가 찍은 토익 문제/지문 이미지를 분석해서 아래 JSON 형식으로만 답하세요.
 
 먼저 이미지에서 보이는 모든 문제 번호(숫자)를 탐지해서 각 문제별로 question_number 필드를 채우세요.
@@ -102,7 +135,7 @@ questions 배열 안의 **모든** 원소에 대해 question, answer, explanatio
 
 다른 말 없이 반드시 JSON만 출력하세요.`
 
-const USER_PROMPT = `이 토익 문제 이미지를 분석해서 위에서 정의한 JSON 형식으로만 답해 주세요.
+const USER_PROMPT_DETAIL = `이 토익 문제 이미지를 분석해서 위에서 정의한 JSON 형식으로만 답해 주세요.
 - 이미지 안에 보이는 모든 문제 번호를 찾아서 question_number에 넣어 주세요.
 - 문제 번호가 보이는 경우, 반드시 번호 범위로 part와 lcOrRc를 결정하세요.
 - 문제가 여러 개면 questions 배열에 모두 넣고, 같은 지문을 공유하면 passage_group_id로 묶어 주세요.
@@ -113,22 +146,54 @@ const USER_PROMPT = `이 토익 문제 이미지를 분석해서 위에서 정�
 특히 tags, grammarCategory, grammarSubType, passageType, questionType, questionPattern, answerType 등
 모든 분류 관련 텍스트는 반드시 한국어(한글)로만 작성하세요.`
 
+function buildImageUrlForOpenAI(imageUrl: string | undefined, imageBase64: string | undefined): string | null {
+  if (imageBase64 && String(imageBase64).trim()) {
+    const s = String(imageBase64).trim()
+    if (s.startsWith('data:')) return s
+    return `data:image/jpeg;base64,${s}`
+  }
+  if (imageUrl && String(imageUrl).trim()) return String(imageUrl).trim()
+  return null
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
   }
 
   try {
-    const { imageUrl } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const imageUrlForBody = body?.imageUrl as string | undefined
+    const imageBase64 = body?.imageBase64 as string | undefined
+    const mode: 'quick' | 'detail' = body?.mode === 'detail' ? 'detail' : 'quick'
+    const selectedQuestions = body?.selectedQuestions
 
-    if (!imageUrl) {
-      return jsonRes({ error: 'imageUrl이 없어요.' }, 400)
+    const urlForVision = buildImageUrlForOpenAI(imageUrlForBody, imageBase64)
+    if (!urlForVision) {
+      return jsonRes({ error: 'imageUrl 또는 imageBase64가 필요해요.' }, 400)
     }
 
     if (!OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY 환경변수가 없음')
       return jsonRes({ error: '서버 설정 오류 (OPENAI_API_KEY 미설정)' }, 500)
     }
+
+    const isQuick = mode === 'quick'
+    let systemPrompt = isQuick ? SYSTEM_PROMPT_QUICK : SYSTEM_PROMPT_DETAIL
+    let userText = isQuick ? USER_PROMPT_QUICK : USER_PROMPT_DETAIL
+
+    if (!isQuick && Array.isArray(selectedQuestions) && selectedQuestions.length > 0) {
+      userText += `
+
+**부분 상세 분석 모드**
+아래 목록에 있는 문제들만 전체 필드로 분석하세요. questions 배열의 길이와 순서는 반드시 아래 목록과 동일해야 합니다.
+(동일한 question_number·part·passage_group_id를 가진 문제를 이미지에서 찾아 각 항목을 채우세요.)
+
+선택된 문제 목록(JSON):
+${JSON.stringify(selectedQuestions)}`
+    }
+
+    const maxTokens = isQuick ? 2048 : 4096
 
     const openaiRes = await fetch(OPENAI_API_URL, {
       method: 'POST',
@@ -139,17 +204,17 @@ serve(async (req) => {
       body: JSON.stringify({
         model: MODEL,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
             content: [
-              { type: 'text', text: USER_PROMPT },
-              { type: 'image_url', image_url: { url: imageUrl } },
+              { type: 'text', text: userText },
+              { type: 'image_url', image_url: { url: urlForVision } },
             ],
           },
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 4096,
+        max_tokens: maxTokens,
       }),
     })
 
@@ -168,8 +233,7 @@ serve(async (req) => {
       return jsonRes({ error: 'AI 분석 결과를 받지 못했어요.' }, 502)
     }
 
-    return jsonRes({ content })
-
+    return jsonRes({ content, mode })
   } catch (err) {
     console.error('analyze-toeic-image 예외:', err)
     return jsonRes({ error: '서버 오류가 발생했어요.' }, 500)

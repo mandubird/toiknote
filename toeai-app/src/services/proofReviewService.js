@@ -21,6 +21,37 @@ export const BEST_FEATURE_OPTIONS = [
   '오답 노트',
 ]
 
+/** v1 후기 수집 Step1 — 최대 3개 */
+export const REVIEW_V1_HELPFUL_FEATURES = [
+  '약점 TOP3',
+  '오늘 할 일 3개',
+  '버려야 할 공부',
+  '오답 기록 방식',
+  '문제 유형 분석',
+  '점수 손실 분석',
+  '전략 가이드',
+  '학습 방향 제시',
+  'Part별 약점 분석',
+]
+
+export const REVIEW_V1_BEFORE_OPTIONS = [
+  '공부 방향이 불명확했다',
+  '어디서 점수를 잃는지 몰랐다',
+  '문제를 많이 풀어도 점수가 안 올랐다',
+  'Part7 시간이 부족했다',
+  '오답 정리가 어려웠다',
+  '무엇을 공부해야 할지 몰랐다',
+]
+
+export const REVIEW_V1_AFTER_OPTIONS = [
+  '공부 방향이 명확해졌다',
+  '약점이 보이기 시작했다',
+  '틀리는 이유가 보인다',
+  '시간 관리 전략이 생겼다',
+  '오답 복습이 쉬워졌다',
+  '아직 잘 모르겠다',
+]
+
 /**
  * @returns {Promise<{ should_show: boolean }>}
  */
@@ -143,6 +174,107 @@ export async function submitProofReviewStep2(userId, assetId, form) {
   }
 
   return { reward }
+}
+
+/**
+ * v1 4단계 후기 수집 — proof_assets upsert (유저당 review 1행)
+ * @param {string} userId
+ * @param {{
+ *   helpful_features: string[],
+ *   before_state: string,
+ *   after_change: string,
+ *   one_line_review: string,
+ *   review_visibility: 'anonymous'|'with_score'|'private',
+ *   current_score: number|null,
+ *   target_score: number|null,
+ * }} payload
+ */
+export async function submitReviewCollectionV1(userId, payload) {
+  if (!userId) throw new Error('로그인이 필요합니다.')
+
+  const helpful = Array.isArray(payload.helpful_features) ? payload.helpful_features.slice(0, 3) : []
+  const oneLine = (payload.one_line_review || '').trim()
+  if (!oneLine.length || oneLine.length > 80) {
+    throw new Error('한 줄 후기는 1~80자로 입력해 주세요.')
+  }
+  if (!payload.before_state || !payload.after_change) {
+    throw new Error('사용 전·후 항목을 선택해 주세요.')
+  }
+  if (helpful.length === 0) {
+    throw new Error('도움이 된 기능을 1개 이상 선택해 주세요.')
+  }
+
+  const vis = payload.review_visibility || 'private'
+  if (!['anonymous', 'with_score', 'private'].includes(vis)) {
+    throw new Error('공개 설정이 올바르지 않습니다.')
+  }
+
+  const consentPublic = vis !== 'private'
+  const cur = payload.current_score != null ? Number(payload.current_score) : null
+  const tgt = payload.target_score != null ? Number(payload.target_score) : null
+
+  const contentMeta = JSON.stringify({
+    v1_collection: true,
+    helpful_features: helpful,
+    before_state: payload.before_state,
+    after_change: payload.after_change,
+    review_visibility: vis,
+  })
+
+  const baseRow = {
+    headline: oneLine,
+    one_line_review: oneLine,
+    helpful_features: helpful,
+    before_state: payload.before_state,
+    after_change: payload.after_change,
+    review_visibility: vis,
+    current_score: Number.isFinite(cur) ? cur : null,
+    target_score: Number.isFinite(tgt) ? tgt : null,
+    consent_public: consentPublic,
+    review_stage: 2,
+    is_public: false,
+    approved_at: null,
+    content: contentMeta,
+  }
+
+  const existing = await fetchMyProofReview(userId)
+
+  if (existing?.id) {
+    const { error: upErr } = await supabase
+      .from('proof_assets')
+      .update(baseRow)
+      .eq('id', existing.id)
+      .eq('user_id', userId)
+      .eq('type', 'review')
+
+    if (upErr) throw new Error(upErr.message || '저장에 실패했습니다.')
+
+    let reward2 = { success: false, reason: 'skipped' }
+    if (consentPublic) {
+      reward2 = await rpcGrantReviewReward(existing.id, 2)
+    }
+    return { assetId: existing.id, rewardStage2: reward2 }
+  }
+
+  const { data: inserted, error: insErr } = await supabase
+    .from('proof_assets')
+    .insert({
+      user_id: userId,
+      type: 'review',
+      ...baseRow,
+    })
+    .select('id')
+    .single()
+
+  if (insErr) throw new Error(insErr.message || '후기 저장에 실패했습니다.')
+
+  const reward1 = await rpcGrantReviewReward(inserted.id, 1)
+  let reward2 = { success: false, reason: 'skipped' }
+  if (consentPublic) {
+    reward2 = await rpcGrantReviewReward(inserted.id, 2)
+  }
+
+  return { assetId: inserted.id, rewardStage1: reward1, rewardStage2: reward2 }
 }
 
 /** 결제 시트·상단용: 공개 승인된 후기 */

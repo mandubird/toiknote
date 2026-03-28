@@ -30,6 +30,7 @@ const AnalysisConfirmModal = ({
   saving,
   multiTotal = 1,
   multiIndex = 0,
+  detailAnalyzing = false,
 }) => {
   const [part, setPart] = useState('')
   const [question, setQuestion] = useState('')
@@ -81,7 +82,7 @@ const AnalysisConfirmModal = ({
   }, [open, initialData, resetFormFromInitial])
 
   useEffect(() => {
-    if (!open) return
+    if (!open || detailAnalyzing) return
     setProblemTypes([])
     let cancelled = false
     ;(async () => {
@@ -91,10 +92,10 @@ const AnalysisConfirmModal = ({
     return () => {
       cancelled = true
     }
-  }, [open, partNumber])
+  }, [open, partNumber, detailAnalyzing])
 
   useEffect(() => {
-    if (!open || problemTypeId == null) {
+    if (!open || detailAnalyzing || problemTypeId == null) {
       setDictionaryTags([])
       setSelectedDictionaryTagIds([])
       return
@@ -110,9 +111,36 @@ const AnalysisConfirmModal = ({
     return () => {
       cancelled = true
     }
-  }, [open, problemTypeId])
+  }, [open, problemTypeId, detailAnalyzing])
 
   if (!open) return null
+
+  if (detailAnalyzing) {
+    return (
+      <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+        <div className="bg-white w-full max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-w-lg mx-auto overflow-hidden min-h-[200px]">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900">문제를 분석했습니다</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
+              aria-label="닫기"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-10">
+            <div className="w-10 h-10 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+            <p className="text-sm font-medium text-gray-800">분석 중…</p>
+            <p className="text-xs text-gray-500 text-center">선택한 문제의 상세 정보를 가져오고 있어요</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const toggleUserTag = (tag) => {
     setUserSelectedTags((prev) =>

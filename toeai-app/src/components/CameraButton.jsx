@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { resizeAndCompressImage } from '../utils/imageUtils'
+import { resizeAndCompressImage, readBlobAsDataURL } from '../utils/imageUtils'
 import UploadProgressOverlay from './UploadProgressOverlay'
 import ImageSourceBottomSheet from './ImageSourceBottomSheet'
 
@@ -10,7 +10,8 @@ const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadMessage, setUploadMessage] = useState('이미지를 업로드하고 있어요...')
+  const [uploadMessage, setUploadMessage] = useState('이미지 업로드 중...')
+  const uploadMsgTimersRef = useRef([])
 
   const handleCameraClick = () => {
     if (!user) {
@@ -24,26 +25,35 @@ const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
     if (!user || !file?.type?.startsWith('image/')) return
     setUploading(true)
     setUploadProgress(0)
-    setUploadMessage('이미지를 업로드하고 있어요...')
+    setUploadMessage('이미지 업로드 중...')
+    uploadMsgTimersRef.current.forEach(clearTimeout)
+    uploadMsgTimersRef.current = [
+      setTimeout(() => setUploadMessage('문제를 읽고 있습니다...'), 3000),
+      setTimeout(() => setUploadMessage('문항을 정리하고 있습니다...'), 7000),
+    ]
     try {
       const blob = await resizeAndCompressImage(file)
-      setUploadMessage('업로드 중...')
       const path = `users/${user.id}/images/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-      const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
-        contentType: 'image/jpeg',
-        upsert: false,
-      })
-      if (error) throw error
+      const [uploadRes, imageBase64] = await Promise.all([
+        supabase.storage.from(BUCKET).upload(path, blob, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        }),
+        readBlobAsDataURL(blob),
+      ])
+      if (uploadRes.error) throw uploadRes.error
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path)
       const url = urlData?.publicUrl ?? ''
       setUploadMessage('업로드 완료!')
       setUploadProgress(100)
-      onUploadComplete?.(url)
+      onUploadComplete?.({ url, imageBase64 })
       await new Promise((r) => setTimeout(r, 2000))
     } catch (err) {
       console.error('업로드 실패:', err)
       alert(err?.message || '업로드에 실패했어요. 다시 시도해 주세요.')
     } finally {
+      uploadMsgTimersRef.current.forEach(clearTimeout)
+      uploadMsgTimersRef.current = []
       setUploading(false)
       setUploadProgress(0)
     }

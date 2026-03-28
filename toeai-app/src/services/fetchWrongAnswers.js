@@ -1,6 +1,25 @@
 import { supabase } from '../lib/supabase'
 
 /**
+ * 오답 개수만 조회 (코칭 홈 분기 등 — 전체 SELECT 불필요)
+ * @param {string} userId
+ * @returns {Promise<number>}
+ */
+export async function fetchWrongAnswerCount(userId) {
+  if (!userId) return 0
+  const { count, error } = await supabase
+    .from('wrong_answers')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('fetchWrongAnswerCount', error)
+    return 0
+  }
+  return count ?? 0
+}
+
+/**
  * @param {string} userId
  * @returns {Promise<Array<{ id: string, part: string, question: string, answer: string, explanation: string, tags: string[], imageUrl: string, createdAt: Date, partNumber: number, lcOrRc: string, difficulty: number }>>}
  */

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { recordReferral } from '../services/referralService'
@@ -30,10 +30,14 @@ const Layout = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showSelectionScreen, setShowSelectionScreen] = useState(false)
   const [ocrAllQuestions, setOcrAllQuestions] = useState([])
+  /** 2단계 상세 OCR용 (Storage URL과 병렬로 만든 data URL) */
+  const [confirmImageBase64, setConfirmImageBase64] = useState(null)
+  const [detailAnalyzing, setDetailAnalyzing] = useState(false)
   const [showPaywall, setShowPaywall] = useState(false)
   const [saving, setSaving] = useState(false)
   const refreshList = useRefreshList()
   const freeLimit = getFreeLimit()
+  const detailAbortRef = useRef(null)
 
   // 무료 체험 상태
   const [trialInfo, setTrialInfo] = useState(null)
@@ -83,24 +87,29 @@ const Layout = () => {
   }, [user?.id])
 
   const handleUploadComplete = useCallback(
-    async (url) => {
+    async (payload) => {
       if (!user) return
+      const url = typeof payload === 'string' ? payload : payload?.url
+      const imageBase64 = typeof payload === 'object' && payload?.imageBase64 ? payload.imageBase64 : null
+      if (!url) return
       setAnalysisError(null)
       setAnalyzing(true)
       try {
-        const { questions } = await analyzeToeicImage(url)
+        const { questions } = await analyzeToeicImage({ imageUrl: url, imageBase64 }, 'quick')
         if (!questions || !questions.length) {
           throw new Error('이미지에서 토익 문제를 찾지 못했어요.')
         }
         // 전체 입력 큐를 바로 열지 않고, 오답 선택 화면부터 보여줌
         setOcrAllQuestions(questions)
         setConfirmImageUrl(url)
+        setConfirmImageBase64(imageBase64)
         setShowSelectionScreen(true)
 
         setAnalysisQueue([])
         setCurrentQuestionIndex(0)
         setAnalysisResult(null)
         setShowConfirmModal(false)
+        setDetailAnalyzing(false)
       } catch (err) {
         setAnalysisError(err?.message || '사진 분석에 실패했어요.')
         alert(err?.message || '사진 분석에 실패했어요. 다시 시도해 주세요.')
@@ -109,6 +118,51 @@ const Layout = () => {
       }
     },
     [user]
+  )
+
+  const handleOcrSelectionConfirm = useCallback(
+    async (selectedQuestions) => {
+      if (!user || !selectedQuestions?.length) return
+      const imageUrl = confirmImageUrl
+      if (!imageUrl) {
+        alert('이미지 정보가 없어요. 다시 촬영해 주세요.')
+        return
+      }
+      setShowSelectionScreen(false)
+      setShowConfirmModal(true)
+      setDetailAnalyzing(true)
+      setAnalysisResult(null)
+      setAnalysisQueue([])
+      setCurrentQuestionIndex(0)
+
+      const ac = new AbortController()
+      detailAbortRef.current = ac
+      try {
+        const { questions } = await analyzeToeicImage(
+          { imageUrl, imageBase64: confirmImageBase64 },
+          'detail',
+          selectedQuestions,
+          { signal: ac.signal }
+        )
+        if (!questions?.length) {
+          throw new Error('선택한 문제 상세 분석에 실패했어요.')
+        }
+        setAnalysisQueue(questions)
+        setCurrentQuestionIndex(0)
+        setAnalysisResult(questions[0])
+        setAnalysisError(null)
+      } catch (err) {
+        if (err?.name === 'AbortError') return
+        setAnalysisError(err?.message || '상세 분석에 실패했어요.')
+        alert(err?.message || '상세 분석에 실패했어요. 다시 시도해 주세요.')
+        setShowConfirmModal(false)
+        setShowSelectionScreen(true)
+      } finally {
+        setDetailAnalyzing(false)
+        detailAbortRef.current = null
+      }
+    },
+    [user, confirmImageUrl, confirmImageBase64]
   )
 
   const handleConfirmSave = useCallback(
@@ -143,8 +197,10 @@ const Layout = () => {
           } else {
             setShowConfirmModal(false)
             setShowSelectionScreen(false)
+            setDetailAnalyzing(false)
             setAnalysisResult(null)
             setConfirmImageUrl(null)
+            setConfirmImageBase64(null)
             setAnalysisError(null)
             setAnalysisQueue([])
             setCurrentQuestionIndex(0)
@@ -292,19 +348,12 @@ const Layout = () => {
         open={showSelectionScreen}
         questions={ocrAllQuestions}
         wrongCount={analysisQueue.length}
-        onConfirm={(selectedQuestions) => {
-          if (!selectedQuestions || !selectedQuestions.length) return
-          setAnalysisQueue(selectedQuestions)
-          setCurrentQuestionIndex(0)
-          setAnalysisResult(selectedQuestions[0])
-          setAnalysisError(null)
-          setShowSelectionScreen(false)
-          setShowConfirmModal(true)
-        }}
+        onConfirm={handleOcrSelectionConfirm}
         onClose={() => {
           setShowSelectionScreen(false)
           setOcrAllQuestions([])
           setConfirmImageUrl(null)
+          setConfirmImageBase64(null)
           setAnalysisQueue([])
           setAnalysisResult(null)
           setCurrentQuestionIndex(0)
@@ -315,9 +364,12 @@ const Layout = () => {
       <AnalysisConfirmModal
         open={showConfirmModal}
         onClose={() => {
+          detailAbortRef.current?.abort()
           setShowConfirmModal(false)
+          setDetailAnalyzing(false)
           setAnalysisResult(null)
           setConfirmImageUrl(null)
+          setConfirmImageBase64(null)
           setAnalysisQueue([])
           setCurrentQuestionIndex(0)
           setOcrAllQuestions([])
@@ -329,6 +381,7 @@ const Layout = () => {
         imageUrl={confirmImageUrl}
         onSave={handleConfirmSave}
         saving={saving}
+        detailAnalyzing={detailAnalyzing}
       />
 
       {/* 첫 방문 온보딩 */}

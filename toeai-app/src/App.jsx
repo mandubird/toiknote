@@ -29,6 +29,7 @@ import RefundPolicyPage from './pages/RefundPolicyPage'
 import ContactPage from './pages/ContactPage'
 import FaqPage from './pages/FaqPage'
 import AboutPage from './pages/AboutPage'
+import ReviewWritePage from './pages/ReviewWritePage'
 
 /** "/" 진입 분기: 비로그인 → 랜딩, 로그인(trial/paid) → 앱 홈 */
 function HomeOrLanding() {
@@ -83,6 +84,7 @@ function App() {
             <Route path="strategy" element={<StrategyPage />} />
             <Route path="program" element={<ProgramPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="review/write" element={<ReviewWritePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
