@@ -165,14 +165,18 @@ serve(async (req) => {
     let userText = isQuick ? USER_PROMPT_QUICK : USER_PROMPT_DETAIL
 
     if (!isQuick && Array.isArray(selectedQuestions) && selectedQuestions.length > 0) {
-      userText += `
+      // system prompt의 "모두 반환" 지시를 "선택된 것만" 으로 교체
+      systemPrompt = systemPrompt.replace(
+        '이미지 안에 여러 문제가 있으면, 각 문제를 questions 배열의 원소로 모두 반환하세요.\nquestions 배열 안의 **모든** 원소에 대해 question, answer, explanation, tags, difficulty를 빠짐없이 채워야 합니다.\n특히 Part 7에서 147번/148번처럼 여러 문제가 한 지문을 공유하더라도,\n147번과 148번 각각에 대해 고유한 question, answer, explanation, tags를 작성해야 하며\n첫 번째 문제에만 채우고 나머지 문제는 비워 두면 안 됩니다.\n같은 지문을 공유하는 문제들은 같은 passage_group_id로 묶으세요 (예: 147번/148번이면 "pg_147_148").',
+        `이미지에 여러 문제가 있더라도 반드시 아래 지정된 문제들만 분석하세요. 지정되지 않은 문제는 questions 배열에 절대 포함하지 마세요. questions 배열 길이는 반드시 지정된 문제 수와 동일해야 합니다.`
+      )
+      userText = `이 이미지에서 아래 문제 목록에 해당하는 문제들만 분석해 주세요. 목록에 없는 문제는 무시하세요.
 
-**부분 상세 분석 모드**
-아래 목록에 있는 문제들만 전체 필드로 분석하세요. questions 배열의 길이와 순서는 반드시 아래 목록과 동일해야 합니다.
-(동일한 question_number·part·passage_group_id를 가진 문제를 이미지에서 찾아 각 항목을 채우세요.)
+분석할 문제 목록:
+${JSON.stringify(selectedQuestions)}
 
-선택된 문제 목록(JSON):
-${JSON.stringify(selectedQuestions)}`
+각 문제에 대해 part, lcOrRc, question, answer, explanation, tags, difficulty를 채우고 가능한 파트별 세부 필드도 채워 주세요.
+모든 분류 텍스트(tags, grammarCategory 등)는 반드시 한국어로 작성하세요.`
     }
 
     const maxTokens = isQuick ? 512 : 4096

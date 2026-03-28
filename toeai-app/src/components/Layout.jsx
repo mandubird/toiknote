@@ -147,9 +147,17 @@ const Layout = () => {
         if (!questions?.length) {
           throw new Error('선택한 문제 상세 분석에 실패했어요.')
         }
-        setAnalysisQueue(questions)
+        // 선택한 문제 번호만 필터 (AI가 모두 반환한 경우 대비)
+        const selectedNumbers = new Set(
+          selectedQuestions.map((q) => q.question_number).filter((n) => n != null)
+        )
+        const filtered = selectedNumbers.size > 0
+          ? questions.filter((q) => selectedNumbers.has(q.questionNumber))
+          : questions
+        const finalQueue = filtered.length > 0 ? filtered : questions.slice(0, selectedQuestions.length)
+        setAnalysisQueue(finalQueue)
         setCurrentQuestionIndex(0)
-        setAnalysisResult(questions[0])
+        setAnalysisResult(finalQueue[0])
         setAnalysisError(null)
       } catch (err) {
         if (err?.name === 'AbortError') return
