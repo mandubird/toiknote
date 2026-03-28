@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, refreshSupabaseSessionIfPossible, userFacingSupabaseAuthError } from '../lib/supabase'
 import { resizeAndCompressImage, readBlobAsDataURL } from '../utils/imageUtils'
 import UploadProgressOverlay from './UploadProgressOverlay'
 import ImageSourceBottomSheet from './ImageSourceBottomSheet'
@@ -33,6 +33,7 @@ const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
     ]
     try {
       const blob = await resizeAndCompressImage(file)
+      await refreshSupabaseSessionIfPossible()
       const path = `users/${user.id}/images/${Date.now()}_${file.name.replace(/\s/g, '_')}`
       const [uploadRes, imageBase64] = await Promise.all([
         supabase.storage.from(BUCKET).upload(path, blob, {
@@ -50,7 +51,7 @@ const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
       await new Promise((r) => setTimeout(r, 800))
     } catch (err) {
       console.error('업로드 실패:', err)
-      alert(err?.message || '업로드에 실패했어요. 다시 시도해 주세요.')
+      alert(userFacingSupabaseAuthError(err))
     } finally {
       uploadMsgTimersRef.current.forEach(clearTimeout)
       uploadMsgTimersRef.current = []

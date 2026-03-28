@@ -9,6 +9,42 @@
  */
 import { supabase } from '../lib/supabase'
 
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+async function getAccessTokenForFunctions() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) return null
+  const { data: ref, error } = await supabase.auth.refreshSession()
+  if (!error && ref?.session?.access_token) return ref.session.access_token
+  return session.access_token
+}
+
+function readJwtIss(token) {
+  if (!token || typeof token !== 'string') return null
+  const parts = token.split('.')
+  if (parts.length < 2) return null
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : ''
+    const json = JSON.parse(atob(b64 + pad))
+    return typeof json.iss === 'string' ? json.iss.replace(/\/$/, '') : null
+  } catch {
+    return null
+  }
+}
+
+function assertTokenMatchesSupabaseUrl(accessToken, baseUrl) {
+  const iss = readJwtIss(accessToken)
+  if (!iss) return
+  const expected = `${baseUrl.replace(/\/$/, '')}/auth/v1`
+  if (iss === expected) return
+  console.error('[analyzeToeicImage] JWT iss와 앱 Supabase URL 불일치:', { iss, expected })
+  throw new Error(
+    '저장된 로그인이 이 사이트 서버와 맞지 않아요. 브라우저에서 이 사이트 저장 데이터를 지운 뒤 다시 로그인해 주세요.',
+  )
+}
+
 function slimSelectedForDetailApi(q) {
   if (!q || typeof q !== 'object') return {}
   return {
@@ -32,25 +68,59 @@ export async function analyzeToeicImage(input, mode = 'quick', selectedQuestions
     body.selectedQuestions = selectedQuestions.map(slimSelectedForDetailApi)
   }
 
-  const { data, error } = await supabase.functions.invoke('analyze-toeic-image', {
-    body,
-    ...(signal ? { signal } : {}),
-  })
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('앱 서버 설정이 빠져 있어요. 관리자에게 문의해 주세요.')
+  }
 
-  if (error) {
-    // FunctionsHttpError: HTTP 오류 응답 바디 읽기
-    let errMsg = error.message || '사진 분석 서버 오류예요.'
-    try {
-      if (error.context && typeof error.context.json === 'function') {
-        const errBody = await error.context.json()
-        if (errBody?.error) errMsg = errBody.error
-        else if (errBody?.message) errMsg = errBody.message
-      }
-    } catch {
-      // context 읽기 실패 시 원래 메시지 사용
+  const accessToken = await getAccessTokenForFunctions()
+  if (!accessToken) {
+    throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.')
+  }
+
+  assertTokenMatchesSupabaseUrl(accessToken, supabaseUrl)
+
+  const fnUrl = `${supabaseUrl}/functions/v1/analyze-toeic-image`
+  let res
+  try {
+    res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        apikey: supabaseAnonKey,
+      },
+      body: JSON.stringify(body),
+      signal,
+    })
+  } catch (e) {
+    console.error('analyze-toeic-image fetch:', e)
+    throw new Error('네트워크 오류로 분석 요청에 실패했어요. 잠시 후 다시 시도해 주세요.')
+  }
+
+  const rawText = await res.text()
+  let data
+  try {
+    data = rawText ? JSON.parse(rawText) : null
+  } catch {
+    console.error('analyze-toeic-image 비JSON:', res.status, rawText?.slice(0, 200))
+    throw new Error('사진 분석 서버 응답이 올바르지 않아요. 잠시 후 다시 시도해 주세요.')
+  }
+
+  if (!res.ok) {
+    const msg = (data && (data.message || data.error || data.msg)) || rawText || `HTTP ${res.status}`
+    const flat = String(msg)
+    console.error('analyze-toeic-image HTTP:', res.status, flat)
+    if (/invalid\s*jwt/i.test(flat)) {
+      const iss = readJwtIss(accessToken)
+      const expectedIss = `${supabaseUrl}/auth/v1`
+      const mismatch = Boolean(iss && iss !== expectedIss)
+      throw new Error(
+        mismatch
+          ? '로그인 세션이 이 사이트와 맞지 않아요. 사이트 데이터 삭제 후 다시 로그인해 주세요.'
+          : '로그인 토큰을 서버가 거부했어요. 새로고침 후 다시 로그인하거나 잠시 뒤 다시 시도해 주세요.',
+      )
     }
-    console.error('analyze-toeic-image 오류:', errMsg)
-    throw new Error(errMsg)
+    throw new Error(flat.includes('non-2xx') ? '사진 분석 서버 오류예요. 잠시 후 다시 시도해 주세요.' : flat)
   }
 
   if (data?.error) {
