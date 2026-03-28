@@ -41,16 +41,20 @@ export async function analyzeToeicImage(input, mode = 'quick', selectedQuestions
     throw new Error(typeof data.error === 'string' ? data.error : '사진 분석에 실패했어요.')
   }
   if (error) {
-    console.error('analyze-toeic-image Edge Function 오류:', error, data)
-    const fromBody =
-      data && typeof data === 'object' && data.error != null ? String(data.error) : ''
-    const hint = fromBody || error.message || '사진 분석 호출에 실패했어요.'
-    if (hint.includes('non-2xx') && !fromBody) {
-      throw new Error(
-        '사진 분석 서버 응답 오류예요. Supabase에서 analyze-toeic-image 함수 배포와 OPENAI_API_KEY 시크릿을 확인해 주세요.'
-      )
+    // FunctionsHttpError는 throw 전에 body를 읽지 않으므로 response에서 직접 읽음
+    let actualError = ''
+    try {
+      const res = error?.context
+      if (res && typeof res.json === 'function') {
+        const body = await res.json()
+        actualError = body?.error || body?.message || ''
+      }
+    } catch {
+      // body 파싱 실패 시 무시
     }
-    throw new Error(hint)
+    const hint = actualError || error.message || '사진 분석 호출에 실패했어요.'
+    console.error('analyze-toeic-image 오류:', hint, error)
+    throw new Error(hint.includes('non-2xx') ? '사진 분석 서버 오류예요. 잠시 후 다시 시도해 주세요.' : hint)
   }
 
   if (!data?.content) {
