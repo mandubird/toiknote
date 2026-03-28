@@ -54,6 +54,68 @@ function slimSelectedForDetailApi(q) {
   }
 }
 
+async function readFunctionsInvokeErrorMessage(error) {
+  let errMsg = error?.message || ''
+  try {
+    if (error?.context && typeof error.context.json === 'function') {
+      const errBody = await error.context.json()
+      if (errBody?.error) errMsg = typeof errBody.error === 'string' ? errBody.error : errMsg
+      else if (errBody?.message) errMsg = errBody.message
+    }
+  } catch {
+    /* ignore */
+  }
+  return String(errMsg)
+}
+
+/** fetch로 Edge Function 호출 — invoke 실패 시 폴백 */
+async function invokeAnalyzeViaFetch(body, signal, accessToken) {
+  const fnUrl = `${supabaseUrl}/functions/v1/analyze-toeic-image`
+  const res = await fetch(fnUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabaseAnonKey,
+    },
+    body: JSON.stringify(body),
+    signal,
+  })
+  const rawText = await res.text()
+  let data
+  try {
+    data = rawText ? JSON.parse(rawText) : null
+  } catch {
+    console.error('analyze-toeic-image(fetch) 비JSON:', res.status, rawText?.slice(0, 200))
+    throw new Error('PARSE')
+  }
+  if (!res.ok) {
+    const msg = (data && (data.message || data.error || data.msg)) || rawText || `HTTP ${res.status}`
+    const flat = String(msg)
+    console.error('analyze-toeic-image(fetch) HTTP:', res.status, flat)
+    if (/invalid\s*jwt/i.test(flat)) throw new Error('JWT_DENIED')
+    throw new Error(flat.includes('non-2xx') ? '사진 분석 서버 오류예요. 잠시 후 다시 시도해 주세요.' : flat)
+  }
+  if (data?.error) {
+    throw new Error(typeof data.error === 'string' ? data.error : '사진 분석에 실패했어요.')
+  }
+  if (!data?.content) {
+    throw new Error('사진 분석 결과를 받지 못했어요.')
+  }
+  return data
+}
+
+function throwJwtDeniedUserMessage(accessToken) {
+  const iss = readJwtIss(accessToken)
+  const expectedIss = `${supabaseUrl}/auth/v1`
+  const mismatch = Boolean(iss && iss !== expectedIss)
+  throw new Error(
+    mismatch
+      ? '로그인 세션이 이 사이트와 맞지 않아요. 사이트 데이터 삭제 후 다시 로그인해 주세요.'
+      : '로그인 토큰을 서버가 거부했어요. 새로고침 후 다시 로그인하거나 잠시 뒤 다시 시도해 주세요.',
+  )
+}
+
 export async function analyzeToeicImage(input, mode = 'quick', selectedQuestions = null, options = {}) {
   const { signal } = options
   const imageUrl = typeof input === 'string' ? input : input?.imageUrl
@@ -79,52 +141,48 @@ export async function analyzeToeicImage(input, mode = 'quick', selectedQuestions
 
   assertTokenMatchesSupabaseUrl(accessToken, supabaseUrl)
 
-  const fnUrl = `${supabaseUrl}/functions/v1/analyze-toeic-image`
-  let res
-  try {
-    res = await fetch(fnUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-        apikey: supabaseAnonKey,
-      },
-      body: JSON.stringify(body),
-      signal,
-    })
-  } catch (e) {
-    console.error('analyze-toeic-image fetch:', e)
-    throw new Error('네트워크 오류로 분석 요청에 실패했어요. 잠시 후 다시 시도해 주세요.')
-  }
+  supabase.functions.setAuth(accessToken)
 
-  const rawText = await res.text()
+  const invokeOpts = { body }
+  if (signal) invokeOpts.signal = signal
+
   let data
-  try {
-    data = rawText ? JSON.parse(rawText) : null
-  } catch {
-    console.error('analyze-toeic-image 비JSON:', res.status, rawText?.slice(0, 200))
-    throw new Error('사진 분석 서버 응답이 올바르지 않아요. 잠시 후 다시 시도해 주세요.')
-  }
+  const { data: invData, error: invErr } = await supabase.functions.invoke('analyze-toeic-image', invokeOpts)
 
-  if (!res.ok) {
-    const msg = (data && (data.message || data.error || data.msg)) || rawText || `HTTP ${res.status}`
-    const flat = String(msg)
-    console.error('analyze-toeic-image HTTP:', res.status, flat)
-    if (/invalid\s*jwt/i.test(flat)) {
-      const iss = readJwtIss(accessToken)
-      const expectedIss = `${supabaseUrl}/auth/v1`
-      const mismatch = Boolean(iss && iss !== expectedIss)
-      throw new Error(
-        mismatch
-          ? '로그인 세션이 이 사이트와 맞지 않아요. 사이트 데이터 삭제 후 다시 로그인해 주세요.'
-          : '로그인 토큰을 서버가 거부했어요. 새로고침 후 다시 로그인하거나 잠시 뒤 다시 시도해 주세요.',
-      )
+  if (!invErr && invData?.content && !invData?.error) {
+    data = invData
+  } else if (!invErr && invData?.error) {
+    throw new Error(typeof invData.error === 'string' ? invData.error : '사진 분석에 실패했어요.')
+  } else if (invErr) {
+    const errFlat = await readFunctionsInvokeErrorMessage(invErr)
+    console.warn('analyze-toeic-image invoke:', errFlat)
+    const jwtRejected = /invalid\s*jwt/i.test(errFlat)
+    if (jwtRejected) {
+      let token2
+      try {
+        token2 = await getAccessTokenForFunctions()
+        if (!token2) throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.')
+        data = await invokeAnalyzeViaFetch(body, signal, token2)
+      } catch (e) {
+        if (e?.message === 'JWT_DENIED') throwJwtDeniedUserMessage(token2 || accessToken)
+        throw e
+      }
+    } else {
+      throw new Error(errFlat.includes('non-2xx') ? '사진 분석 서버 오류예요. 잠시 후 다시 시도해 주세요.' : errFlat)
     }
-    throw new Error(flat.includes('non-2xx') ? '사진 분석 서버 오류예요. 잠시 후 다시 시도해 주세요.' : flat)
-  }
-
-  if (data?.error) {
-    throw new Error(typeof data.error === 'string' ? data.error : '사진 분석에 실패했어요.')
+  } else {
+    let token2
+    try {
+      token2 = await getAccessTokenForFunctions()
+      if (!token2) throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.')
+      data = await invokeAnalyzeViaFetch(body, signal, token2)
+    } catch (e) {
+      if (e?.message === 'JWT_DENIED') throwJwtDeniedUserMessage(token2 || accessToken)
+      if (e?.message === 'PARSE') {
+        throw new Error('사진 분석 서버 응답이 올바르지 않아요. 잠시 후 다시 시도해 주세요.')
+      }
+      throw e
+    }
   }
 
   if (!data?.content) {
