@@ -32,9 +32,10 @@ export async function analyzeToeicImage(input, mode = 'quick', selectedQuestions
     body.selectedQuestions = selectedQuestions.map(slimSelectedForDetailApi)
   }
 
-  // 만료된 JWT 방지: invoke 전 세션 갱신
+  // 만료된 JWT 방지: 세션 갱신 후 functions 클라이언트에 토큰 명시 설정
   const { data: sessionData } = await supabase.auth.getSession()
   if (!sessionData?.session) throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.')
+  supabase.functions.setAuth(sessionData.session.access_token)
 
   const invokeOpts = { body }
   if (signal) invokeOpts.signal = signal
