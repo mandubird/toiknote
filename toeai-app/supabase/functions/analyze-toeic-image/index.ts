@@ -11,6 +11,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
@@ -157,6 +158,32 @@ function buildImageUrlForOpenAI(imageUrl: string | undefined, imageBase64: strin
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
+  }
+
+  if (req.method !== 'POST') {
+    return jsonRes({ error: 'Method not allowed' }, 405)
+  }
+
+  // 게이트웨이 verify_jwt=false(config.toml)일 때: 여기서 반드시 로그인 사용자만 허용
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return jsonRes({ error: '로그인이 필요해요.' }, 401)
+  }
+
+  const sbUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const sbAnon = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+  if (!sbUrl || !sbAnon) {
+    console.error('analyze-toeic-image: SUPABASE_URL / SUPABASE_ANON_KEY 없음')
+    return jsonRes({ error: '서버 설정 오류' }, 500)
+  }
+
+  const supabaseAuth = createClient(sbUrl, sbAnon, {
+    global: { headers: { Authorization: authHeader } },
+  })
+  const { data: authData, error: authErr } = await supabaseAuth.auth.getUser()
+  if (authErr || !authData?.user) {
+    console.error('analyze-toeic-image getUser:', authErr)
+    return jsonRes({ error: '인증에 실패했어요. 다시 로그인해 주세요.' }, 401)
   }
 
   try {

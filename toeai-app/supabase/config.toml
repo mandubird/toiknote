@@ -1,0 +1,4 @@
+# analyze-toeic-image: 게이트웨이 JWT 검증이 Invalid JWT를 유발하는 경우를 피하기 위해 비활성화.
+# 실제 인증은 함수 내부에서 supabase.auth.getUser()로 수행한다.
+[functions.analyze-toeic-image]
+verify_jwt = false
