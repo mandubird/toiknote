@@ -32,18 +32,6 @@ export async function analyzeToeicImage(input, mode = 'quick', selectedQuestions
     body.selectedQuestions = selectedQuestions.map(slimSelectedForDetailApi)
   }
 
-  // Edge Function 게이트웨이는 유효한 access JWT만 허용. getSession()만 쓰면 만료된 토큰이 그대로 나가
-  // Supabase가 "Invalid JWT"를 반환함(탭 복귀·장시간 방치·일부 브라우저 등).
-  const { data: before } = await supabase.auth.getSession()
-  if (!before?.session) throw new Error('로그인이 필요합니다. 다시 로그인해 주세요.')
-
-  const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession()
-  const accessToken = refreshed?.session?.access_token
-  if (refreshErr || !accessToken) {
-    throw new Error('로그인 세션이 만료됐어요. 다시 로그인해 주세요.')
-  }
-  supabase.functions.setAuth(accessToken)
-
   const invokeOpts = { body }
   if (signal) invokeOpts.signal = signal
 

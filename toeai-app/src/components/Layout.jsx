@@ -86,20 +86,22 @@ const Layout = () => {
     setHideReviewStep1Session(true)
   }, [user?.id])
 
-  // base64 준비 즉시 호출 — Supabase 업로드 완료 전에 분석 시작
-  const handleBase64Ready = useCallback(
-    async (imageBase64) => {
+  const handleUploadComplete = useCallback(
+    async (payload) => {
       if (!user) return
-      setConfirmImageBase64(imageBase64)
-      setConfirmImageUrl(null)
+      const url = typeof payload === 'string' ? payload : payload?.url
+      const imageBase64 = typeof payload === 'object' && payload?.imageBase64 ? payload.imageBase64 : null
+      if (!url) return
       setAnalysisError(null)
       setAnalyzing(true)
       try {
-        const { questions } = await analyzeToeicImage({ imageBase64 }, 'quick')
+        const { questions } = await analyzeToeicImage({ imageUrl: url, imageBase64 }, 'quick')
         if (!questions || !questions.length) {
           throw new Error('이미지에서 토익 문제를 찾지 못했어요.')
         }
         setOcrAllQuestions(questions)
+        setConfirmImageUrl(url)
+        setConfirmImageBase64(imageBase64)
         setShowSelectionScreen(true)
         setAnalysisQueue([])
         setCurrentQuestionIndex(0)
@@ -115,11 +117,6 @@ const Layout = () => {
     },
     [user]
   )
-
-  // 업로드 완료 후 URL 저장 (상세 분석 fallback용)
-  const handleUploadComplete = useCallback(({ url }) => {
-    if (url) setConfirmImageUrl(url)
-  }, [])
 
   const handleOcrSelectionConfirm = useCallback(
     async (selectedQuestions) => {
@@ -338,8 +335,7 @@ const Layout = () => {
       {showCameraButton && (
         <CameraButton
           user={user}
-          onBase64Ready={handleBase64Ready}
-          onUrlReady={handleUploadComplete}
+          onUploadComplete={handleUploadComplete}
           onLoginRequired={handleLoginRequired}
         />
       )}

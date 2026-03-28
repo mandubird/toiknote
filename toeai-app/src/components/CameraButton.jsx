@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { resizeAndCompressImage, readBlobAsDataURL } from '../utils/imageUtils'
 import UploadProgressOverlay from './UploadProgressOverlay'
@@ -6,9 +6,12 @@ import ImageSourceBottomSheet from './ImageSourceBottomSheet'
 
 const BUCKET = 'images'
 
-const CameraButton = ({ user, onBase64Ready, onUrlReady, onLoginRequired }) => {
+const CameraButton = ({ user, onUploadComplete, onLoginRequired }) => {
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false)
-  const [compressing, setCompressing] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadMessage, setUploadMessage] = useState('이미지 업로드 중...')
+  const uploadMsgTimersRef = useRef([])
 
   const handleCameraClick = () => {
     if (!user) {
@@ -20,33 +23,39 @@ const CameraButton = ({ user, onBase64Ready, onUrlReady, onLoginRequired }) => {
 
   const processOneFile = async (file) => {
     if (!user || !file?.type?.startsWith('image/')) return
-    setCompressing(true)
+    setUploading(true)
+    setUploadProgress(0)
+    setUploadMessage('이미지 준비 중...')
+    uploadMsgTimersRef.current.forEach(clearTimeout)
+    uploadMsgTimersRef.current = [
+      setTimeout(() => setUploadMessage('문제를 읽고 있습니다...'), 3000),
+      setTimeout(() => setUploadMessage('문항을 정리하고 있습니다...'), 7000),
+    ]
     try {
       const blob = await resizeAndCompressImage(file)
-      const imageBase64 = await readBlobAsDataURL(blob)
-
-      // base64 준비되는 즉시 분석 시작 — Supabase 업로드를 기다리지 않음
-      setCompressing(false)
-      onBase64Ready?.(imageBase64)
-
-      // 업로드는 백그라운드에서 (저장 용도만)
-      try {
-        const path = `users/${user.id}/images/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-        const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+      const path = `users/${user.id}/images/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+      const [uploadRes, imageBase64] = await Promise.all([
+        supabase.storage.from(BUCKET).upload(path, blob, {
           contentType: 'image/jpeg',
           upsert: false,
-        })
-        if (!error) {
-          const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path)
-          onUrlReady?.({ url: urlData?.publicUrl ?? '' })
-        }
-      } catch {
-        // 업로드 실패 시 무시 — 분석은 base64로 이미 진행 중
-      }
+        }),
+        readBlobAsDataURL(blob),
+      ])
+      if (uploadRes.error) throw uploadRes.error
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path)
+      const url = urlData?.publicUrl ?? ''
+      setUploadMessage('업로드 완료!')
+      setUploadProgress(100)
+      onUploadComplete?.({ url, imageBase64 })
+      await new Promise((r) => setTimeout(r, 800))
     } catch (err) {
-      console.error('이미지 준비 실패:', err)
-      alert(err?.message || '이미지 준비에 실패했어요. 다시 시도해 주세요.')
-      setCompressing(false)
+      console.error('업로드 실패:', err)
+      alert(err?.message || '업로드에 실패했어요. 다시 시도해 주세요.')
+    } finally {
+      uploadMsgTimersRef.current.forEach(clearTimeout)
+      uploadMsgTimersRef.current = []
+      setUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -79,8 +88,8 @@ const CameraButton = ({ user, onBase64Ready, onUrlReady, onLoginRequired }) => {
         <div className="absolute inset-0 rounded-full bg-primary-500 opacity-20 animate-ping pointer-events-none" />
       </div>
 
-      {compressing && (
-        <UploadProgressOverlay message="이미지 준비 중..." hideProgress />
+      {uploading && (
+        <UploadProgressOverlay message={uploadMessage} progress={uploadProgress} />
       )}
     </>
   )
