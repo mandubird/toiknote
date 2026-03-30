@@ -70,6 +70,25 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      {/* ── 체험단 모집 배너 (/landing 전용) ── */}
+      <div
+        className="px-5 py-2.5 text-white"
+        style={{ backgroundColor: '#FF6B2C' }}
+      >
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-1 text-center sm:flex-row sm:gap-2">
+          <p className="text-sm font-semibold leading-snug">
+            🎯 지금 1기 무료 체험단 모집 중 — 9명 한정 (원래 29,900~79,900원 유료)
+          </p>
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSdCugg1bwCgHg8wgMeLmsV9Qs4vrC2M4zTg-geuu6nFiAyUUg/viewform"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-bold underline underline-offset-2 hover:opacity-90"
+          >
+            체험단 신청하기 →
+          </a>
+        </div>
+      </div>
 
       {/* ── 로그인 사용자 배너 ── */}
       {user && (
