@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>토익 점수가 오르지 않는 이유 (정체 구간 분석) | 토답</title>
+  <meta name="description" content="토익 700~850 구간에서 점수가 오르지 않는 이유와 정체 구간 탈출 전략. 약점 분석 기반 공부법으로 점수 상승 방법을 확인하세요." />
+  <link rel="canonical" href="https://www.todap.kr/ai/toeic-score-plateau/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="토익 점수가 오르지 않는 이유 (정체 구간 분석) | 토답" />
+  <meta property="og:description" content="토익 700~850 구간 정체 구간 원인 분석과 탈출 전략." />
+  <meta property="og:url" content="https://www.todap.kr/ai/toeic-score-plateau/" />
+  <meta property="og:site_name" content="토답" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "토익 점수 정체 구간이란 무엇인가요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "토익 점수가 일정 구간에서 오르지 않는 현상을 정체 구간(score plateau)이라고 합니다. 특히 700~850 구간에서 많은 학습자가 점수 상승이 멈추는 경험을 합니다."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "토익 정체 구간이 발생하는 이유는 무엇인가요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "약점 유형이 명확하게 정리되지 않은 상태, 같은 유형의 실수 반복, 문제 풀이량은 많지만 분석 과정 부족, 점수 상승에 영향을 주는 핵심 영역 미파악이 주요 원인입니다."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "토익 정체 구간을 탈출하는 방법은 무엇인가요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "문제 풀이량보다 약점 유형 파악이 중요합니다. 오답 유형 분류 → 실수 원인 기록 → 우선순위 결정 → 공부 계획 설정 순서로 진행하면 동일한 공부 시간에도 점수 변화가 나타납니다."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "토익 700점 800점 정체는 왜 생기나요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "문제를 많이 풀수록 점수가 오를 것이라고 생각하지만, 반복되는 실수 유형을 정리하지 않으면 점수 변화가 제한됩니다. LC와 RC 중 어느 영역에서 점수가 새는지 파악하지 못한 상태가 대표적인 원인입니다."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Nanum Gothic', sans-serif; color: #111827; background: #fff; line-height: 1.7; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+    header { padding: 16px 20px; border-bottom: 1px solid #E5E7EB; }
+    .logo { font-size: 18px; font-weight: 800; color: #1d4ed8; text-decoration: none; }
+    h1 { font-size: 26px; font-weight: 800; line-height: 1.4; margin-bottom: 12px; color: #111827; }
+    h2 { font-size: 18px; font-weight: 700; margin: 36px 0 12px; color: #1e3a8a; }
+    p { font-size: 15px; color: #374151; margin-bottom: 14px; }
+    ul { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 15px; color: #374151; margin-bottom: 6px; }
+    .tag { display: inline-block; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-bottom: 16px; }
+    .divider { border: none; border-top: 1px solid #E5E7EB; margin: 32px 0; }
+    .summary-box { background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0; }
+    .summary-box p { margin-bottom: 0; color: #1e3a8a; font-weight: 500; }
+    .cta { margin-top: 48px; text-align: center; padding: 32px 20px; background: #1e40af; border-radius: 16px; }
+    .cta p { color: rgba(255,255,255,0.85); font-size: 14px; margin-bottom: 4px; }
+    .cta strong { display: block; color: #fff; font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+    .cta a { display: inline-block; background: #fff; color: #1e40af; font-size: 15px; font-weight: 700; padding: 12px 28px; border-radius: 10px; text-decoration: none; }
+    .related { margin-top: 48px; }
+    .related h3 { font-size: 14px; color: #6B7280; margin-bottom: 12px; font-weight: 600; }
+    .related a { display: block; font-size: 14px; color: #1d4ed8; text-decoration: none; padding: 8px 0; border-bottom: 1px solid #F3F4F6; }
+    .related a:hover { text-decoration: underline; }
+    footer { border-top: 1px solid #E5E7EB; padding: 24px 20px; text-align: center; }
+    footer p { font-size: 12px; color: #9CA3AF; }
+    footer a { color: #6B7280; text-decoration: none; }
+    @media (max-width: 480px) { h1 { font-size: 22px; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="https://www.todap.kr">토답</a>
+</header>
+
+<div class="wrap">
+  <span class="tag">토익 정체 구간</span>
+  <h1>토익 점수가 오르지 않는 이유<br>정체 구간 분석</h1>
+
+  <p>토익 점수가 일정 구간에서 오르지 않는 현상을 정체 구간(score plateau)이라고 합니다.</p>
+  <p>특히 700~850 구간에서 많은 학습자가 점수 상승이 멈추는 경험을 합니다. 공부 시간은 늘어나는데 점수는 그대로인 상태가 반복되기 때문에 학습 방향에 대한 고민이 생기기 쉽습니다.</p>
+
+  <hr class="divider" />
+
+  <h2>토익 정체 구간이 발생하는 이유</h2>
+  <p>정체 구간은 보통 다음과 같은 원인으로 발생합니다.</p>
+  <ul>
+    <li>약점 유형이 명확하게 정리되지 않은 상태</li>
+    <li>같은 유형의 실수를 반복하는 패턴</li>
+    <li>문제 풀이량은 많지만 분석 과정이 부족한 경우</li>
+    <li>점수 상승에 영향을 주는 핵심 영역을 우선하지 않는 경우</li>
+  </ul>
+  <p>문제를 많이 풀수록 점수가 오를 것이라고 생각하지만, 반복되는 실수 유형을 정리하지 않으면 점수 변화가 제한되는 경우가 많습니다.</p>
+
+  <h2>잘못된 공부 방법의 특징</h2>
+  <p>정체 구간에서 흔히 나타나는 공부 방식은 다음과 같습니다.</p>
+  <ul>
+    <li>문제를 많이 풀지만 오답 분석을 하지 않는 경우</li>
+    <li>틀린 문제를 다시 보지 않고 다음 문제로 넘어가는 경우</li>
+    <li>LC와 RC 중 어느 영역에서 점수가 새는지 파악하지 못한 상태</li>
+    <li>시험일까지 남은 기간에 맞는 전략 없이 공부하는 경우</li>
+  </ul>
+  <p>이 경우 공부량은 증가하지만 실제 점수 변화로 이어지지 않는 경우가 많습니다.</p>
+
+  <h2>효과적인 공부 전략</h2>
+  <p>정체 구간에서는 문제 풀이량보다 다음 정보가 중요합니다.</p>
+  <ul>
+    <li>현재 점수에서 가장 영향을 주는 약점 유형</li>
+    <li>반복되는 실수 패턴</li>
+    <li>시험일까지 남은 기간 대비 우선순위</li>
+  </ul>
+  <p>약점이 명확해지면 공부 방향도 함께 정리됩니다.</p>
+  <ul>
+    <li>문법 실수 비율이 높은 경우 → 문법 유형 집중</li>
+    <li>Part 3 오답 비율이 높은 경우 → 듣기 집중 전략</li>
+    <li>시간 부족 문제 → 문제 풀이 순서 조정</li>
+  </ul>
+
+  <h2>약점 분석 기반 공부 방법</h2>
+  <p>약점 분석 기반 학습은 다음 순서로 진행됩니다.</p>
+  <ul>
+    <li>오답 유형 분류</li>
+    <li>실수 원인 기록</li>
+    <li>우선순위 결정</li>
+    <li>공부 계획 설정</li>
+  </ul>
+  <p>이 과정을 반복하면 동일한 공부 시간에서도 점수 변화가 나타나는 경우가 많습니다.</p>
+
+  <h2>도구 활용 예시</h2>
+  <p>토답과 같은 학습 보조 도구는 다음 정보를 제공합니다.</p>
+  <ul>
+    <li>약점 TOP3</li>
+    <li>오늘 해야 할 공부 3개</li>
+    <li>지금 당장 줄여야 할 공부 1개</li>
+  </ul>
+  <p>이러한 정보는 학습 방향을 빠르게 정리하는 데 도움을 줄 수 있습니다.</p>
+
+  <div class="summary-box">
+    <p>토익 정체 구간은 공부량 부족보다 방향 문제인 경우가 많습니다. 약점 분석을 통해 우선순위를 정리하면 점수 상승 가능성을 높일 수 있습니다.</p>
+  </div>
+
+  <div class="cta">
+    <p>오답 사진 한 장으로</p>
+    <strong>약점 TOP3 · 오늘 공부 방향 바로 확인</strong>
+    <a href="https://www.todap.kr">토답 무료 시작하기</a>
+  </div>
+
+  <div class="related">
+    <h3>관련 글</h3>
+    <a href="/ai/toeic-weakness-analysis/">토익 약점 분석 방법 (효율적인 오답 정리 전략)</a>
+    <a href="/ai/toeic-study-direction/">토익 공부 방향 설정 방법 (점수 상승 전략)</a>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 토답 · <a href="https://www.todap.kr">www.todap.kr</a></p>
+</footer>
+
+</body>
+</html>

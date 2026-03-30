@@ -541,6 +541,24 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* ── 10. 토익 학습 정보 링크 (GEO/SEO) ── */}
+      <section className="border-t border-gray-100 bg-white px-4 py-8">
+        <div className="mx-auto max-w-2xl">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-400">토익 공부 전략</p>
+          <div className="flex flex-col gap-2">
+            <a href="/ai/toeic-score-plateau/" className="text-sm text-gray-500 hover:text-blue-600 hover:underline">
+              토익 점수가 오르지 않는 이유 (정체 구간 분석)
+            </a>
+            <a href="/ai/toeic-weakness-analysis/" className="text-sm text-gray-500 hover:text-blue-600 hover:underline">
+              토익 약점 분석 방법 (효율적인 오답 정리 전략)
+            </a>
+            <a href="/ai/toeic-study-direction/" className="text-sm text-gray-500 hover:text-blue-600 hover:underline">
+              토익 공부 방향 설정 방법 (점수 상승 전략)
+            </a>
+          </div>
+        </div>
+      </section>
+
       <PublicFooter />
     </div>
   )
