@@ -11,10 +11,7 @@ export default function AdminReviewPanel({ adminId: adminIdProp }) {
   const ctx = useOutletContext()
   const adminId = adminIdProp ?? ctx?.adminId
   const [reviews, setReviews] = useState([])
-
-  if (!adminId) {
-    return <div className="p-4 text-gray-500">관리자 정보를 불러올 수 없습니다.</div>
-  }
+  const [proofQueue, setProofQueue] = useState([])
   const [rejectReason, setRejectReason] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -73,6 +70,10 @@ export default function AdminReviewPanel({ adminId: adminIdProp }) {
         <div className="animate-spin w-8 h-8 border-2 border-primary-200 border-t-primary-600 rounded-full" />
       </div>
     )
+  }
+
+  if (!adminId) {
+    return <div className="p-4 text-gray-500">관리자 정보를 불러올 수 없습니다.</div>
   }
 
   return (
