@@ -30,6 +30,7 @@ import ContactPage from './pages/ContactPage'
 import FaqPage from './pages/FaqPage'
 import AboutPage from './pages/AboutPage'
 import ReviewWritePage from './pages/ReviewWritePage'
+import OAuthWebViewBanner from './components/OAuthWebViewBanner'
 
 /** "/" 진입 분기: 비로그인 → 랜딩, 로그인(trial/paid) → 앱 홈 */
 function HomeOrLanding() {
@@ -51,6 +52,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <OAuthWebViewBanner />
         <RefreshListProvider>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />

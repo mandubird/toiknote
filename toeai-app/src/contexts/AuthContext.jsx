@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { isLikelyInAppWebView, openInExternalBrowser } from '../utils/inAppWebView'
 
 const AuthContext = createContext(null)
 
@@ -24,6 +25,14 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = async (redirectTo) => {
     try {
+      if (typeof window !== 'undefined' && isLikelyInAppWebView()) {
+        openInExternalBrowser(window.location.href)
+        const err = new Error(
+          '외부 브라우저로 열었습니다. Safari/Chrome에서 이 페이지를 연 뒤 다시 구글 로그인을 눌러 주세요.',
+        )
+        err.code = 'WEBVIEW_OAUTH_REDIRECT'
+        throw err
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
